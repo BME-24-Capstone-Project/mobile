@@ -1,6 +1,6 @@
-import {React, useEffect} from 'react';
-import {Button, Text, View} from 'react-native';
-import {BleManager} from 'react-native-ble-plx';
+import { React, useEffect } from "react";
+import { Button, Text, View } from "react-native";
+import { BleManager } from "react-native-ble-plx";
 
 const manager = new BleManager();
 
@@ -27,7 +27,7 @@ function scanAndConnect() {
   manager.startDeviceScan(null, null, (error, device) => {
     if (error) {
       // Handle error (scanning will be stopped automatically)
-      console.log('Error while scanning devices');
+      console.log("Error while scanning devices");
       console.log(error);
       return;
     }
