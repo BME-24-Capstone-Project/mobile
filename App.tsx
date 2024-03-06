@@ -20,8 +20,9 @@ const Stack = createNativeStackNavigator();
 //   ...DefaultTheme,
 //   colors: {
 //     ...DefaultTheme.colors,
-//     primary: 'tomato',
-//     secondary: 'yellow',
+//     primary: '',
+//     secondary: '',
+//     tertiary: '',
 //   },
 // };
 
