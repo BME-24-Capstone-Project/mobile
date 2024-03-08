@@ -12,6 +12,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { LoginScreen } from "./components/login/LoginScreen";
 import { CurrentDayScreen } from "./components/currentDay/CurrentDayScreen";
 import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
+import { ExerciseInProgressScreen } from "./components/exerciseInProgressScreen/ExerciseInProgressScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +41,11 @@ function App(): JSX.Element {
           <Stack.Screen
             name="CurrentDayScreen"
             component={CurrentDayScreen}
+            // options={{ title: "today" }}
+          />
+          <Stack.Screen
+            name="ExerciseInProgressScreen"
+            component={ExerciseInProgressScreen}
             // options={{ title: "today" }}
           />
         </Stack.Navigator>

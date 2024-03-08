@@ -1,30 +1,38 @@
-import { faCircleInfo, faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
+import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import React = require("react");
+import { useState } from "react";
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Button, Card, Icon, IconButton, Switch} from "react-native-paper";
+import { Button, IconButton, Modal, Portal, Switch} from "react-native-paper";
+import YoutubeIframe from "react-native-youtube-iframe";
 
 export const CurrentDayScreen = ({navigation, route}) => {
 
-  const [wantsFeedback, setWantsFeedback] = React.useState(true);
+  const [wantsFeedback, setWantsFeedback] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<any>(undefined)
+  const showModal = () => setVisible(true);
+  const hideModal = () => setVisible(false);
 
   const exercises = [
     {
-      name: "One legged stair climb",
+      name: "One Legged Stair Climb",
       description: "Description here",
       repetitions: 10,
+      notes: "Physiotherapists notes",
       sets: 3,
     },
     {
-      name: "Sit to stand",
+      name: "Sit to Stand",
       description: "Description here",
       repetitions: 10,
       sets: 3,
+      helpVideoID: "y6NUWq_AEvI"
     },
     {
       name: "Walking",
       description: "Description here",
-      distance: "2 km"
+      distance: "2 km",
+      notes: "Physiotherapists notes",
     },
   ]
 
@@ -36,12 +44,42 @@ export const CurrentDayScreen = ({navigation, route}) => {
         {exercise.repetitions && <Text style={styles.exerciseDetails}>Repetitions: {exercise.repetitions}</Text>}
         {exercise.distance && <Text style={styles.exerciseDetails}>Distance: {exercise.distance}</Text>}
       </View>
-      <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => console.log('Pressed')}>
+      <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
+        setSelectedExercise(exercise)
+        showModal()
+      }}>
         <FontAwesomeIcon size={40} icon={ faCircleInfo } />
-        <Text style={styles.helpIconText}>Help</Text>
+        <Text style={styles.helpIconText}>More Info</Text>
       </TouchableOpacity>
     </View>
-  )
+  )   
+
+  const HelpModal = ({exercise}) => {
+    
+    const [playing, setPlaying] = useState(false);
+
+    return ( 
+      <Portal>
+        <Modal visible={visible} onDismiss={hideModal} contentContainerStyle={styles.modalContainerStyle}>
+        <TouchableOpacity onPress={() => hideModal()}>
+          <FontAwesomeIcon size={30} icon={ faXmark }/>
+        </TouchableOpacity>
+        <View style={styles.youtubePlayerContainer}>
+          {exercise.helpVideoID && (
+            <YoutubeIframe
+              height={300}
+              play={playing}
+              videoId={exercise.helpVideoID}
+            />
+          )}
+        </View>
+          
+         {exercise.notes && <Text>Physiotherapist's Notes: {exercise.notes}</Text>}
+       </Modal>
+      </Portal>
+    ) 
+  }
+  
 
   return (
     <SafeAreaView>
@@ -66,13 +104,17 @@ export const CurrentDayScreen = ({navigation, route}) => {
             style={styles.startExerciseButton}  
             mode="contained" 
             buttonColor="green"  
-            onPress={() => console.log("Start Exercies")}
+            onPress={() => navigation.navigate('ExerciseInProgressScreen')}
           > 
-            Start Session 
+            <Text style={styles.startExerciseButtonText}>
+              Start Session 
+            </Text>
           </Button>
         </View>
-        
       </View>
+      {selectedExercise && (
+        <HelpModal exercise={selectedExercise}/>
+      )}
     </SafeAreaView>
   );
 };
@@ -157,6 +199,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     backgroundColor: 'white',
-  }
-
+  },
+  modalContainerStyle: {
+    backgroundColor: 'white', 
+    padding: 10,
+    width:'90%',
+    alignSelf: 'center',
+  },
+  youtubePlayerContainer: {
+    padding: 10,
+  },
+  startExerciseButtonText: {
+    fontSize: 20,
+  },
 });
