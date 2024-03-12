@@ -18,6 +18,9 @@ export const LoginScreen = ({navigation}) => {
         password
       }
     }).then((response) => {
+      axios.defaults.headers.common = {
+        "x-access-token": response.data.access_token,
+      };
       navigation.navigate('CurrentDayScreen', {
         access_token: response.data.access_token
       })

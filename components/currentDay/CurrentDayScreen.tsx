@@ -3,23 +3,32 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Button, IconButton, Modal, Portal, Switch} from "react-native-paper";
+import { Button, Modal, Portal, Switch} from "react-native-paper";
 import YoutubeIframe from "react-native-youtube-iframe";
 
 export const CurrentDayScreen = ({navigation, route}) => {
-  const access_token = route.params
+  const [exercises, setExercises] = useState<AssignedExercise[]>()
+  const [session, setSession] = useState<Session>()
+  const [wantsFeedback, setWantsFeedback] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<AssignedExercise>()
+  const showModal = () => setVisible(true);
+  const hideModal = () => setVisible(false);
+  let exerciseList = undefined;
+
 
   // Pull assigned_exercises
   // Pull current session if it exists/ otherwise create one. 
   // Update wantsFeedback here
 
   useEffect(() => {
-    axios.post(`http://localhost:8080/auth/login`,{}, {  
-      headers: {
-        access_token: route.params.access_token
-      }
-    }).then((response: any) => {
-      console.log(response.data)
+    loadExercises()
+    loadSession()
+  }, [])
+
+  const loadExercises = () => {
+    axios.get(`http://localhost:8080/assigned_exercises`).then((response: any) => {
+      setExercises(response.data.data)
     }).catch((error: any) => {
       console.log(error);
       Alert.alert(
@@ -36,56 +45,60 @@ export const CurrentDayScreen = ({navigation, route}) => {
         },
       );
     })
-  }, [])
+  }
 
-  const [wantsFeedback, setWantsFeedback] = useState(true);
-  const [visible, setVisible] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState<any>(undefined)
-  const showModal = () => setVisible(true);
-  const hideModal = () => setVisible(false);
-
-  const exercises = [
-    {
-      name: "One Legged Stair Climb",
-      description: "Description here",
-      repetitions: 10,
-      notes: "Physiotherapists notes",
-      sets: 3,
-    },
-    {
-      name: "Sit to Stand",
-      description: "Description here",
-      repetitions: 10,
-      sets: 3,
-      helpVideoID: "y6NUWq_AEvI"
-    },
-    {
-      name: "Walking",
-      description: "Description here",
-      distance: "2 km",
-      notes: "Physiotherapists notes",
-    },
-  ]
-
-  const exerciseList = exercises.map(exercise =>
-    <View style={styles.exerciseListItem} key={exercise.name}>
-      <View style={styles.exerciseListItemDetailsContainer}>
-        <Text style={styles.exerciseTitle}>{exercise.name}</Text>
-        {exercise.sets && <Text style={styles.exerciseDetails}>Sets: {exercise.sets}</Text>}
-        {exercise.repetitions && <Text style={styles.exerciseDetails}>Repetitions: {exercise.repetitions}</Text>}
-        {exercise.distance && <Text style={styles.exerciseDetails}>Distance: {exercise.distance}</Text>}
+  const loadSession = () => {
+    axios.get(`http://localhost:8080/sessions`).then((response: any) => {
+      if (!response.error) {
+        setSession(response.data.data)
+      } else {
+        // TODO: Move to separate function
+        // axios.post(`http://localhost:8080/sessions`, {}).then((response: any) => {
+          
+        // }).catch((error: any) => {
+        //   console.log(error)
+        // })
+      }
+    }).catch((error: any) => {
+      console.log(error);
+      Alert.alert(
+        'Error Fetching Session',
+        error,
+        [
+          {
+            text: 'Ok',
+            style: 'cancel',
+          },
+        ],
+        {
+          cancelable: true,
+        },
+      );
+    })
+  }
+  
+  if (exercises) {
+    exerciseList = exercises.map(exercise =>
+      <View style={styles.exerciseListItem} key={exercise.exercise.name}>
+        <View style={styles.exerciseListItemDetailsContainer}>
+          <Text style={styles.exerciseTitle}>{exercise.exercise.name}</Text>
+          {(exercise.num_sets && exercise.num_sets > 1) && <Text style={styles.exerciseDetails}>Sets: {exercise.num_sets}</Text>}
+          {(exercise.num_reps && exercise.num_reps > 1) && <Text style={styles.exerciseDetails}>Repetitions: {exercise.num_reps}</Text>}
+          {exercise.distance && <Text style={styles.exerciseDetails}>Distance: {exercise.distance}m</Text>}
+        </View>
+        <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
+          setSelectedExercise(exercise)
+          showModal()
+        }}>
+          <FontAwesomeIcon size={40} icon={ faCircleInfo } />
+          <Text style={styles.helpIconText}>More Info</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
-        setSelectedExercise(exercise)
-        showModal()
-      }}>
-        <FontAwesomeIcon size={40} icon={ faCircleInfo } />
-        <Text style={styles.helpIconText}>More Info</Text>
-      </TouchableOpacity>
-    </View>
-  )   
+    )
+  }
 
-  const HelpModal = ({exercise}) => {
+
+  const HelpModal = ({assignedExercise}: {assignedExercise: AssignedExercise}) => {
     
     const [playing, setPlaying] = useState(false);
 
@@ -96,21 +109,25 @@ export const CurrentDayScreen = ({navigation, route}) => {
           <FontAwesomeIcon size={30} icon={ faXmark }/>
         </TouchableOpacity>
         <View style={styles.youtubePlayerContainer}>
-          {exercise.helpVideoID && (
+          {assignedExercise.exercise.video_id && (
             <YoutubeIframe
-              height={300}
+              height={200}
               play={playing}
-              videoId={exercise.helpVideoID}
+              videoId={assignedExercise.exercise.video_id}
             />
           )}
+          {assignedExercise.note && (
+          <>
+            <Text style={styles.physioHeaderText}>Physiotherapist's Notes:</Text>
+            <Text>{assignedExercise.note}</Text>
+          </>
+          )}
         </View>
-          
-         {exercise.notes && <Text>Physiotherapist's Notes: {exercise.notes}</Text>}
+         
        </Modal>
       </Portal>
     ) 
   }
-  
 
   return (
     <SafeAreaView>
@@ -128,7 +145,7 @@ export const CurrentDayScreen = ({navigation, route}) => {
           <Text style={styles.exerciseHeaderText}>Your Exercises:</Text>
         </View>
         <View style={styles.exerciseList}>
-        {exerciseList}
+          {exerciseList ? exerciseList : <Text>No assigned exercies</Text>}
         </View>
         <View style={styles.startExerciseButtonContainer}>
           <Button 
@@ -144,7 +161,7 @@ export const CurrentDayScreen = ({navigation, route}) => {
         </View>
       </View>
       {selectedExercise && (
-        <HelpModal exercise={selectedExercise}/>
+        <HelpModal assignedExercise={selectedExercise}/>
       )}
     </SafeAreaView>
   );
@@ -243,4 +260,9 @@ const styles = StyleSheet.create({
   startExerciseButtonText: {
     fontSize: 20,
   },
+  physioHeaderText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    paddingBottom: 10,
+  }
 });

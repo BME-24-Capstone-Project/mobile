@@ -41,7 +41,7 @@ function App(): JSX.Element {
           <Stack.Screen
             name="CurrentDayScreen"
             component={CurrentDayScreen}
-            // options={{ title: "today" }}
+            options={{ title: "Today's Exercises" }}
           />
           <Stack.Screen
             name="ExerciseInProgressScreen"
