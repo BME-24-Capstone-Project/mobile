@@ -1,11 +1,42 @@
 import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { useState } from "react";
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Button, IconButton, Modal, Portal, Switch} from "react-native-paper";
 import YoutubeIframe from "react-native-youtube-iframe";
 
 export const CurrentDayScreen = ({navigation, route}) => {
+  const access_token = route.params
+
+  // Pull assigned_exercises
+  // Pull current session if it exists/ otherwise create one. 
+  // Update wantsFeedback here
+
+  useEffect(() => {
+    axios.post(`http://localhost:8080/auth/login`,{}, {  
+      headers: {
+        access_token: route.params.access_token
+      }
+    }).then((response: any) => {
+      console.log(response.data)
+    }).catch((error: any) => {
+      console.log(error);
+      Alert.alert(
+        'Error Fetching Assigned Exercises',
+        error,
+        [
+          {
+            text: 'Ok',
+            style: 'cancel',
+          },
+        ],
+        {
+          cancelable: true,
+        },
+      );
+    })
+  }, [])
 
   const [wantsFeedback, setWantsFeedback] = useState(true);
   const [visible, setVisible] = useState(false);
