@@ -46,6 +46,9 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   }
 
   const startOrContinueSession = () => {
+    if (session) {
+      navigation.navigate('ExerciseInProgressScreen')
+    }
     navigation.navigate('ExerciseInProgressScreen')
   }
 
