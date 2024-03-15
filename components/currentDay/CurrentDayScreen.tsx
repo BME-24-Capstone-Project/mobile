@@ -3,10 +3,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Button, Modal, Portal, Switch} from "react-native-paper";
+import { Button, Modal, Portal, Switch, useTheme} from "react-native-paper";
 import YoutubeIframe from "react-native-youtube-iframe";
+import { GlobalStyles } from "../../common/data-types/styles";
+import { styles } from "./CurrentDayScreenStyles";
 
-export const CurrentDayScreen = ({navigation, route}) => {
+export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: any}) => {
+  const theme = useTheme()
   const [exercises, setExercises] = useState<AssignedExercise[]>()
   const [session, setSession] = useState<Session>()
   const [wantsFeedback, setWantsFeedback] = useState(true);
@@ -15,11 +18,6 @@ export const CurrentDayScreen = ({navigation, route}) => {
   const showModal = () => setVisible(true);
   const hideModal = () => setVisible(false);
   let exerciseList = undefined;
-
-
-  // Pull assigned_exercises
-  // Pull current session if it exists/ otherwise create one. 
-  // Update wantsFeedback here
 
   useEffect(() => {
     loadExercises()
@@ -45,6 +43,10 @@ export const CurrentDayScreen = ({navigation, route}) => {
         },
       );
     })
+  }
+
+  const startOrContinueSession = () => {
+    navigation.navigate('ExerciseInProgressScreen')
   }
 
   const loadSession = () => {
@@ -81,17 +83,17 @@ export const CurrentDayScreen = ({navigation, route}) => {
     exerciseList = exercises.map(exercise =>
       <View style={styles.exerciseListItem} key={exercise.exercise.name}>
         <View style={styles.exerciseListItemDetailsContainer}>
-          <Text style={styles.exerciseTitle}>{exercise.exercise.name}</Text>
-          {(exercise.num_sets && exercise.num_sets > 1) && <Text style={styles.exerciseDetails}>Sets: {exercise.num_sets}</Text>}
-          {(exercise.num_reps && exercise.num_reps > 1) && <Text style={styles.exerciseDetails}>Repetitions: {exercise.num_reps}</Text>}
-          {exercise.distance && <Text style={styles.exerciseDetails}>Distance: {exercise.distance}m</Text>}
+          <Text style={GlobalStyles.appHeadingText}>{exercise.exercise.name}</Text>
+          {(exercise.num_sets && exercise.num_sets > 1) && <Text style={GlobalStyles.appParagraphText}>Sets: {exercise.num_sets}</Text>}
+          {(exercise.num_reps && exercise.num_reps > 1) && <Text style={GlobalStyles.appParagraphText}>Repetitions: {exercise.num_reps}</Text>}
+          {exercise.distance && <Text style={GlobalStyles.appParagraphText}>Distance: {exercise.distance}m</Text>}
         </View>
         <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
           setSelectedExercise(exercise)
           showModal()
         }}>
           <FontAwesomeIcon size={40} icon={ faCircleInfo } />
-          <Text style={styles.helpIconText}>More Info</Text>
+          <Text style={GlobalStyles.appParagraphText}>More Info</Text>
         </TouchableOpacity>
       </View>
     )
@@ -105,26 +107,35 @@ export const CurrentDayScreen = ({navigation, route}) => {
     return ( 
       <Portal>
         <Modal visible={visible} onDismiss={hideModal} contentContainerStyle={styles.modalContainerStyle}>
-        <TouchableOpacity onPress={() => hideModal()}>
-          <FontAwesomeIcon size={30} icon={ faXmark }/>
-        </TouchableOpacity>
-        <View style={styles.youtubePlayerContainer}>
-          {assignedExercise.exercise.video_id && (
-            <YoutubeIframe
-              height={200}
-              play={playing}
-              videoId={assignedExercise.exercise.video_id}
-            />
-          )}
-          {assignedExercise.note && (
-          <>
-            <Text style={styles.physioHeaderText}>Physiotherapist's Notes:</Text>
-            <Text>{assignedExercise.note}</Text>
-          </>
-          )}
-        </View>
-         
-       </Modal>
+          <TouchableOpacity onPress={() => hideModal()}>
+            <FontAwesomeIcon size={30} icon={ faXmark }/>
+          </TouchableOpacity>
+          <View style={styles.youtubePlayerContainer}>
+            {assignedExercise.exercise.video_id && (
+              <YoutubeIframe
+                height={200}
+                play={playing}
+                videoId={assignedExercise.exercise.video_id}
+              />
+            )}
+            {assignedExercise.note && (
+            <View style={{gap: 5}}>
+              <Text style={GlobalStyles.appSubHeadingText}>Physiotherapist's Notes:</Text>
+              <Text style={GlobalStyles.appParagraphText}>{assignedExercise.note}</Text>
+            </View>
+            )}
+          </View>
+          <Button
+            // style={styles.closeModalButton}
+            mode="contained" 
+            buttonColor='red'
+            onPress={() => hideModal()}
+          >
+            <Text style={GlobalStyles.buttonText}>
+              Close Modal
+            </Text>
+          </Button>
+        </Modal>
       </Portal>
     ) 
   }
@@ -133,16 +144,16 @@ export const CurrentDayScreen = ({navigation, route}) => {
     <SafeAreaView>
       <View style={styles.container}>
         <View style={styles.headerContainer}>
-          <Text style={styles.exerciseHeaderText}>Session Options:</Text>
+          <Text style={GlobalStyles.appHeadingText}>Session Options:</Text>
         </View>
         <View style={styles.sessionOptionsList}>
           <View style={styles.sessionOptionsItem}>
-            <Text style={styles.exerciseDetails}>Receive feedback on exercise form?</Text>
+            <Text style={GlobalStyles.appParagraphText}>Receive feedback on exercise form?</Text>
             <Switch value={wantsFeedback} onValueChange={() => setWantsFeedback(!wantsFeedback)}></Switch>
           </View>
         </View>
         <View style={styles.headerContainer}>
-          <Text style={styles.exerciseHeaderText}>Your Exercises:</Text>
+          <Text style={GlobalStyles.appHeadingText}>Your Exercises:</Text>
         </View>
         <View style={styles.exerciseList}>
           {exerciseList ? exerciseList : <Text>No assigned exercies</Text>}
@@ -151,11 +162,11 @@ export const CurrentDayScreen = ({navigation, route}) => {
           <Button 
             style={styles.startExerciseButton}  
             mode="contained" 
-            buttonColor="green"  
-            onPress={() => navigation.navigate('ExerciseInProgressScreen')}
+            buttonColor={theme.colors.primary}
+            onPress={startOrContinueSession}
           > 
-            <Text style={styles.startExerciseButtonText}>
-              Start Session 
+            <Text style={GlobalStyles.buttonText}>
+              {session ? "Start Session": "Continue Session"}
             </Text>
           </Button>
         </View>
@@ -168,101 +179,4 @@ export const CurrentDayScreen = ({navigation, route}) => {
 };
 
 
-const styles = StyleSheet.create({
-  container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    height: '100%',
-  },
-  headerContainer: {
-    justifyContent: 'flex-start',
-    width: '100%',
-    paddingLeft: 20,
-  },
-  exerciseHeaderText: {
-    fontSize: 20,
-    fontWeight: 'bold'
-  },
-  startExerciseButton: {
-    padding: 5,
-  },
-  startExerciseButtonContainer: {
-    width: '100%', 
-    paddingLeft: 10,
-    paddingRight: 10,
-  },
-  exerciseList: {
-    padding: 10,
-    width: '100%',
-  },
-  exerciseListItem: {
-    justifyContent: 'space-between',
-    flexDirection: 'row',
-    width: '100%',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 8,
-    shadowColor: '#171717',
-    shadowOffset: {width: -3, height: 1},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    backgroundColor: 'white',
-  },
-  exerciseListItemHelpContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    flex: 1,
-    gap: 5,
-  },
-  exerciseListItemDetailsContainer: {
-    flex: 3,
-    gap: 5,
-  },
-  exerciseTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  exerciseDetails: {
-    fontSize: 16,
-  },
-  helpIconText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  sessionOptionsList: {
-    padding: 10,
-    width: '100%',
-  },
-  sessionOptionsItem: {
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexDirection: 'row',
-    width: '100%',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 8,
-    shadowColor: '#171717',
-    shadowOffset: {width: -3, height: 1},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    backgroundColor: 'white',
-  },
-  modalContainerStyle: {
-    backgroundColor: 'white', 
-    padding: 10,
-    width:'90%',
-    alignSelf: 'center',
-  },
-  youtubePlayerContainer: {
-    padding: 10,
-  },
-  startExerciseButtonText: {
-    fontSize: 20,
-  },
-  physioHeaderText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    paddingBottom: 10,
-  }
-});
+

@@ -6,42 +6,49 @@
  */
 
 import React from "react";
-import type { PropsWithChildren } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { LoginScreen } from "./components/login/LoginScreen";
 import { CurrentDayScreen } from "./components/currentDay/CurrentDayScreen";
-import { MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
+import { MD3LightTheme as DefaultTheme, Modal, PaperProvider, Text } from "react-native-paper";
 import { ExerciseInProgressScreen } from "./components/exerciseInProgressScreen/ExerciseInProgressScreen";
+import { GlobalStyles, Colors } from "./common/data-types/styles";
 
 const Stack = createNativeStackNavigator();
 
 
-// const theme = {
-//   ...DefaultTheme,
-//   colors: {
-//     ...DefaultTheme.colors,
-//     primary: '',
-//     secondary: '',
-//     tertiary: '',
-//   },
-// };
+const theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    ...Colors
+  },
+};
 
 function App(): JSX.Element {
   return (
-    <PaperProvider>
+    <PaperProvider theme={theme}>
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen
             options={{headerShown: false}}
             name="Login"
             component={LoginScreen}
-            // options={{ title: "Welcome" }}
           />
           <Stack.Screen
             name="CurrentDayScreen"
             component={CurrentDayScreen}
-            options={{ title: "Today's Exercises" }}
+            options={{ 
+              headerTitle: "Your Treatment Plan",
+              headerStyle: {
+                backgroundColor: theme.colors.primary
+              },
+              headerTitleStyle: {
+                ...GlobalStyles.appHeadingText,
+                color: theme.colors.secondary
+              },
+              headerLeft: () => <></>
+           }}
           />
           <Stack.Screen
             name="ExerciseInProgressScreen"

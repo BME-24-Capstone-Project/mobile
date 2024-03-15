@@ -1,53 +1,58 @@
 {
-  "images": [
+  "images" : [
     {
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "20x20"
+      "idiom" : "iphone",
+      "scale" : "2x",
+      "size" : "20x20"
     },
     {
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "20x20"
+      "idiom" : "iphone",
+      "scale" : "3x",
+      "size" : "20x20"
     },
     {
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "29x29"
+      "idiom" : "iphone",
+      "scale" : "2x",
+      "size" : "29x29"
     },
     {
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "29x29"
+      "idiom" : "iphone",
+      "scale" : "3x",
+      "size" : "29x29"
     },
     {
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "40x40"
+      "filename" : "arthrosync-icon-80x80.png",
+      "idiom" : "iphone",
+      "scale" : "2x",
+      "size" : "40x40"
     },
     {
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "40x40"
+      "filename" : "arthrosync-icon-120x120 1.png",
+      "idiom" : "iphone",
+      "scale" : "3x",
+      "size" : "40x40"
     },
     {
-      "idiom": "iphone",
-      "scale": "2x",
-      "size": "60x60"
+      "filename" : "arthrosync-icon-120x120.png",
+      "idiom" : "iphone",
+      "scale" : "2x",
+      "size" : "60x60"
     },
     {
-      "idiom": "iphone",
-      "scale": "3x",
-      "size": "60x60"
+      "filename" : "arthrosync-icon-180x180.png",
+      "idiom" : "iphone",
+      "scale" : "3x",
+      "size" : "60x60"
     },
     {
-      "idiom": "ios-marketing",
-      "scale": "1x",
-      "size": "1024x1024"
+      "filename" : "Arthrosync-iOS Icon.png",
+      "idiom" : "ios-marketing",
+      "scale" : "1x",
+      "size" : "1024x1024"
     }
   ],
-  "info": {
-    "author": "xcode",
-    "version": 1
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
   }
 }
