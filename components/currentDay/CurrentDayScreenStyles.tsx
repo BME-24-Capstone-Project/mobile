@@ -1,29 +1,22 @@
 import { StyleSheet } from "react-native";
-import { Colors } from "../../common/data-types/styles";
+import { Colors, GlobalStyles } from "../../common/data-types/styles";
+
 
 export const styles = StyleSheet.create({
     container: {
-      justifyContent: 'center',
+      ...GlobalStyles.container,
+      justifyContent: 'space-between',
       alignItems: 'center',
       width: '100%',
       height: '100%',
-      backgroundColor: Colors.secondary
     },
     headerContainer: {
       justifyContent: 'flex-start',
       width: '100%',
-      paddingLeft: 20,
-    },
-    startExerciseButton: {
-      padding: 5,
-    },
-    startExerciseButtonContainer: {
-      width: '100%', 
-      paddingLeft: 10,
-      paddingRight: 10,
+      paddingBottom: 10,
     },
     exerciseList: {
-      padding: 10,
+      gap: 15,
       width: '100%',
     },
     exerciseListItem: {
@@ -31,7 +24,6 @@ export const styles = StyleSheet.create({
       flexDirection: 'row',
       width: '100%',
       padding: 10,
-      marginBottom: 10,
       borderRadius: 8,
       shadowColor: '#171717',
       shadowOffset: {width: -3, height: 1},
@@ -50,7 +42,7 @@ export const styles = StyleSheet.create({
       gap: 5,
     },
     sessionOptionsList: {
-      padding: 10,
+      gap: 15,
       width: '100%',
     },
     sessionOptionsItem: {

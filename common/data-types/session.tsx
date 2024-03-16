@@ -6,3 +6,10 @@ type Session = {
     end_time: string;
     complete: string;
 };
+
+type CurrentSetAndSessionData = {
+    assigned_exercise: AssignedExercise;
+    completed_exercise_sets: number;
+    completed_session_sets: number;
+    total_session_sets: number;
+};
