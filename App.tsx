@@ -15,7 +15,8 @@ import { ExerciseInProgressScreen } from "./components/exerciseInProgressScreen/
 import { GlobalStyles, Colors } from "./common/data-types/styles";
 import { Text, TouchableOpacity } from "react-native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faArrowLeft, faCircle } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCircle, faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { BluetoothTest } from "./components/BluetoothTest";
 
 const Stack = createNativeStackNavigator();
 
@@ -55,8 +56,8 @@ function App(): JSX.Element {
               //     <FontAwesomeIcon size={30} icon={ faArrowLeft } />
               //   </TouchableOpacity>
               // )
-              headerBackTitle: "Back"
-           }}
+              headerBackTitle: "Back",
+            }}
           />
           <Stack.Screen
             name="ExerciseInProgressScreen"
@@ -73,6 +74,26 @@ function App(): JSX.Element {
               },
             }}
             // options={{ title: "today" }}
+          />
+          <Stack.Screen
+            name="BluetoothTest"
+            component={BluetoothTest}
+            options={{ 
+              headerTitle: "Your Treatment Plan",
+              headerStyle: {
+                backgroundColor: theme.colors.primary
+              },
+              headerTitleStyle: {
+                ...GlobalStyles.appHeadingText,
+                color: theme.colors.secondary
+              },
+              // headerLeft: () => (
+              //   <TouchableOpacity onPress>
+              //     <FontAwesomeIcon size={30} icon={ faArrowLeft } />
+              //   </TouchableOpacity>
+              // )
+              headerBackTitle: "Back"
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>

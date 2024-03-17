@@ -13,3 +13,8 @@ type CurrentSetAndSessionData = {
     completed_session_sets: number;
     total_session_sets: number;
 };
+
+type Feedback = {
+    error_mode: string;
+    instructions: string;
+}

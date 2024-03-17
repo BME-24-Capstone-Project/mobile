@@ -55,6 +55,11 @@ export const LoginScreen = ({navigation}: {navigation: any}) => {
             Login 
           </Text>
         </Button>
+        <Button style={{width: '75%', margin: 10}}  mode="contained" onPress={() => navigation.navigate('BluetoothTest')}> 
+          <Text style={GlobalStyles.buttonText}>
+            Bluetooth test 
+          </Text>
+        </Button>
       </View>
     </SafeAreaView>
   );

@@ -2,7 +2,7 @@ import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { Alert, SafeAreaView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView, Text, TouchableOpacity, View } from "react-native";
 import { Button, Dialog, Modal, Portal, Switch, useTheme} from "react-native-paper";
 import YoutubeIframe from "react-native-youtube-iframe";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
