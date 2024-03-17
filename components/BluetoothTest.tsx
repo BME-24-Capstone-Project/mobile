@@ -2,6 +2,10 @@ import {useEffect, useState} from 'react';
 import {Button, Text, View} from 'react-native';
 import {BleManager, Characteristic, Device} from 'react-native-ble-plx';
 import base64 from 'base-64';
+import { AirbnbRating, Rating } from 'react-native-ratings';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faStar } from '@fortawesome/free-solid-svg-icons';
+import { Colors } from '../common/data-types/styles';
 
 const manager = new BleManager();
 
@@ -73,12 +77,32 @@ export const BluetoothTest = () => {
 
   return (
     <View>
+      <AirbnbRating
+        count={5}
+        selectedColor={Colors.primary}
+        reviews={["No pain", "Mild", "Moderate", "Severe", "Extreme"]}
+        defaultRating={3}
+        size={40}
+        onFinishRating={(rating) => console.log(rating)}
+        starContainerStyle={{gap: 10}}
+        reviewColor={Colors.primary}
+      />
       <Text>Bluetooth Test Component</Text>
       <Button title="Click for devices" onPress={scanAndConnect} />
       <Button title="Click to stop scan and disconnect" onPress={stopAndDisconnect} />
       {connectedDevice && <Button title="Read device services" onPress={readDevicesServices} />
       }
       <Text>{}</Text>
+      {/* <Rating
+        type='custom'
+        ratingImage={(<FontAwesomeIcon icon={faStar}/>)}
+        ratingColor='#3498db'
+        ratingBackgroundColor='#c8c7c8'
+        ratingCount={10}
+        imageSize={30}
+        onFinishRating={(rating) => console.log(rating)}
+        style={{ paddingVertical: 10 }}
+      /> */}
     </View>
   );
 };

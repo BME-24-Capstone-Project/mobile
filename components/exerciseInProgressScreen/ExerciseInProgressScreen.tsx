@@ -1,10 +1,11 @@
 import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { Button, ProgressBar} from "react-native-paper";
+import { Button, ProgressBar, TextInput} from "react-native-paper";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
 import LottieView from "lottie-react-native";
 import { BleManager } from "react-native-ble-plx";
+import { AirbnbRating } from "react-native-ratings";
 
 // add "done calibrating screen"
 // add images of calibration poses
@@ -15,7 +16,8 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   const manager = new BleManager();
 
   const session_id = route.params.session_id
-  console.log(`sessionid: ${session_id}`)
+  console.log("Params wants feedback")
+  console.log(route.params.wants_feedback)
   const [currentSetAndSessionData, setCurrentSetAndSessionData] = useState<CurrentSetAndSessionData>()
   const [setInProgress, setSetInProgress] = useState<boolean>(false)
   const [countdownInProgress, setCountdownInProgress] = useState<boolean>(false)
@@ -27,6 +29,10 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   const [exerciseSetsComplete, setExerciseSetsComplete] = useState<boolean>(false)
   const [calibrating, setCalibrating] = useState<boolean>(false)
   const [needsCalibration, setNeedsCalibrating] = useState<boolean>(false)
+  const [painRating, setPainRating] = useState<number>(3)
+  const [submittedPainRating, setSubmittedPainRating] = useState<number>()
+  const [note, setNote] = useState<string>("")
+  const [wantsFeedback, setWantsFeedback] = useState<boolean>(route.params.wants_feedback)
 
   // could show previous exercises feedback on next exercise page. 
   useEffect(() => {
@@ -36,7 +42,6 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
 
   useEffect(() => {
     if (countdownInProgress) {
-      console.log(countdownValue)
         const interval = setInterval(() => {
           setCountdownValue((prevCount) => {
             if (prevCount === 1) {
@@ -46,7 +51,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
             }
             return prevCount - 1;
           });
-        }, 300);
+        }, 1000);
         return () => clearInterval(interval)
     }
   }, [countdownInProgress]);
@@ -61,6 +66,8 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   }, [calibrating]);
 
   useEffect(() => {
+    console.log("wants feedback")
+    console.log(wantsFeedback)
     //add bluetooth calibrate code
     if (loadingFeedback) {
       axios.post(`http://localhost:8080/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, {
@@ -73,18 +80,21 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
         angle: [],
       }).then((response: any) => {
         //setFeedbackFromPrev(response.data.data)
-        console.log(response.data)
+        console.log('here')
         loadCurrentExerciseAndSessionData()
       }).catch((error: any) => {
         console.log('Error creating Session: ')
         console.log(error)
       })
+      
       setTimeout(() => {
         setLoadingFeedback(false)
-        setFeedbackFromPrev({
-          error_mode: "Error Mode.",
-          instructions: "Do this instead of that."
-        })
+        if (wantsFeedback) {
+          setFeedbackFromPrev({
+            error_mode: "Error Mode.",
+            instructions: "Do this instead of that."
+          })
+        }
       }, 1000)
     }
   }, [loadingFeedback]);
@@ -124,20 +134,30 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   
 
   const loadCurrentExerciseAndSessionData = () => {
-    axios.get(`http://localhost:8080/exercise_sets/${session_id}`).then((response: any) => {
-      setCurrentSetAndSessionData(response.data.data)
-      if (response.data.data.completed_exercise_sets === 0) {
-        setNeedsCalibrating(true)
-      }
-    }).catch((error: any) => {
-      console.log("Error Getting currentSetAndSessionData")
-      console.log(error);
-    })
+    if (!exerciseSetsComplete) {
+      axios.get(`http://localhost:8080/exercise_sets/${session_id}`).then((response: any) => {
+        setCurrentSetAndSessionData(response.data.data)
+        if (response.data.data && response.data.data.completed_session_sets === 0) {
+          setNeedsCalibrating(true)
+        } else if (!response.data.data) {
+          console.log("No response data received, sets complete")
+          setExerciseSetsComplete(true);
+
+        }
+      }).catch((error: any) => {
+        console.log("Error Getting currentSetAndSessionData")
+        console.log(`error: ${error}`);
+      })
+    }
   }
 
   const calibrate = () => {
     setNeedsCalibrating(false)
     setCalibrating(true)
+  }
+  
+  const submitPainRating = () => {
+    setSubmittedPainRating(painRating)
   }
 
   const startSet = () => {
@@ -150,6 +170,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   const submitSet = () => {
     setSetInProgress(false)
     setLoadingFeedback(true)
+    
     // pull data from bluetooth
     // submit to DB
     // submit feedback
@@ -161,10 +182,29 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
     setCountdownInProgress(false)
   }
 
+  const submitSession = () => {
+    axios.post(`http://localhost:8080/surveys/${session_id}`, {
+      five_point_pain_scale_response: submittedPainRating,
+      notes: note,
+    }).then((response: any) => {
+        console.log("Survey submitted")
+        axios.put(`http://localhost:8080/sessions/${session_id}`, {}).then((response) => {
+          console.log("Session Completed")
+          navigation.navigate('CurrentDayScreen', {completed_session: true})
+        }).catch((error) => {
+          console.log("Error Completing Session")
+          console.log(`error: ${error}`);
+        })
+    }).catch((error: any) => {
+        console.log("Error Submitting Survey")
+        console.log(`error: ${error}`);
+    })
+  }
+
   const contentContainer = () => {
     if (countdownInProgress) {
       return (<Text style={{...GlobalStyles.appHeadingText, fontSize: 100}}>{countdownValue}</Text>)
-    } else if (feedbackFromPrev && !needsCalibration && !calibrating) {
+    } else if (feedbackFromPrev && !needsCalibration && !calibrating && !exerciseSetsComplete) {
       return (
         <>
           <Text style={GlobalStyles.appHeadingText}>{feedbackFromPrev.error_mode}</Text>
@@ -184,7 +224,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
           <Text style={GlobalStyles.appHeadingText}>Recording...</Text>
         </View>
       )
-    } else if (loadingFeedback) {
+    } else if (loadingFeedback && wantsFeedback) {
       return (
         <View style={{alignItems: "center", gap: 50}}>
           <LottieView
@@ -196,8 +236,36 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
           <Text style={GlobalStyles.appHeadingText}>Loading Feedback</Text>
         </View>
       )
-    } else if (exerciseSetsComplete) {
-      
+    } else if (exerciseSetsComplete && !submittedPainRating) {
+      return (
+        <View style={{alignItems: "center", gap: 50}}>
+          <Text style={GlobalStyles.appHeadingText}>How was your pain during today's session?</Text>
+          <AirbnbRating
+            count={5}
+            selectedColor={Colors.primary}
+            reviews={["No pain", "Mild", "Moderate", "Severe", "Extreme"]}
+            defaultRating={3}
+            size={40}
+            onFinishRating={(rating) => setPainRating(rating)}
+            starContainerStyle={{gap: 10}}
+            reviewColor={Colors.primary}
+          />
+        </View>
+      )
+    } else if (exerciseSetsComplete && submittedPainRating) {
+      return (
+        <View style={{alignItems: "center", gap: 50, width: '100%', padding: 30}}>
+          <Text style={GlobalStyles.appHeadingText}>Include any notes for your physiotherapist below.</Text>
+          <TextInput
+            label="Note"
+            value={note}
+            style={{backgroundColor: Colors.tertiary, width: '100%'}}
+            onChangeText={input => setNote(input)}
+            mode='outlined'
+            multiline={true}
+          />
+        </View>
+      )
     } else if (calibrating) {
       return (
         <View style={{alignItems: "center", gap: 50}}>
@@ -220,37 +288,42 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
 
   return (
     <SafeAreaView>
-      {currentSetAndSessionData && (
+      {(currentSetAndSessionData  || exerciseSetsComplete) && (
         <View style={styles.container}>
           <View style={styles.headerContainer}>
             <View style={styles.headerItemContainer}>
               <View style={styles.progressBarAndPercentageContainer}>
                 <View style={styles.progressBarContainer}>
-                  <ProgressBar progress={currentSetAndSessionData?.completed_session_sets/currentSetAndSessionData?.total_session_sets} color={Colors.primary} style={styles.progressBarStyle}/>
+                  <ProgressBar progress={currentSetAndSessionData ? currentSetAndSessionData?.completed_session_sets/currentSetAndSessionData?.total_session_sets : 100} color={Colors.primary} style={styles.progressBarStyle}/>
                 </View>
-                <Text style={styles.percentageContainer}>{currentSetAndSessionData?.completed_session_sets*100/currentSetAndSessionData?.total_session_sets | 0} %</Text>
+                <Text style={styles.percentageContainer}>{currentSetAndSessionData ? currentSetAndSessionData?.completed_session_sets*100/currentSetAndSessionData?.total_session_sets | 0 : 100} %</Text>
               </View>
             </View>
             <View style={{...styles.headerItemContainer, alignItems:'center', gap: 5}}>
-              <Text style={GlobalStyles.appHeadingText}>{currentSetAndSessionData?.assigned_exercise.exercise.name}</Text>
-              <View style={{flexDirection: 'row'}}>
-                <Text style={GlobalStyles.appSubHeadingText}>Set: </Text>
-                <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData?.completed_exercise_sets + 1}/{currentSetAndSessionData.assigned_exercise.num_sets}</Text>
-              </View>
-              <View style={{flexDirection: 'row'}}>
-                <Text style={GlobalStyles.appSubHeadingText}>Reps: </Text>
-                <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData.assigned_exercise.num_reps}</Text>
-              </View>
-              {currentSetAndSessionData.assigned_exercise.distance && 
-                <View style={{flexDirection: 'row'}}>
-                  <Text style={GlobalStyles.appSubHeadingText}>Distance: </Text>
-                  <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData.assigned_exercise.distance} km</Text>
-                </View>
-              }
-              {/* <View style={{flexDirection: 'row'}}>
-                <Text style={GlobalStyles.appSubHeadingText}>Up next: </Text>
-                <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData.assigned_exercise.num_reps}</Text>
-              </View> */}
+              {currentSetAndSessionData && !exerciseSetsComplete ? (
+                <>
+                  <Text style={GlobalStyles.appHeadingText}>{currentSetAndSessionData?.assigned_exercise.exercise.name}</Text>
+                  <View style={{flexDirection: 'row'}}>
+                    <Text style={GlobalStyles.appSubHeadingText}>Set: </Text>
+                    <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData?.completed_exercise_sets + 1}/{currentSetAndSessionData.assigned_exercise.num_sets}</Text>
+                  </View>
+                  <View style={{flexDirection: 'row'}}>
+                    <Text style={GlobalStyles.appSubHeadingText}>Reps: </Text>
+                    <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData.assigned_exercise.num_reps}</Text>
+                  </View>
+                  {currentSetAndSessionData.assigned_exercise.distance && 
+                  <View style={{flexDirection: 'row'}}>
+                    <Text style={GlobalStyles.appSubHeadingText}>Distance: </Text>
+                    <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData.assigned_exercise.distance} km</Text>
+                  </View>
+                  }
+                </>
+              ) : (
+                <>
+                  <Text style={GlobalStyles.appHeadingText}>Session Complete!</Text>
+                </>
+              )}
+              
             </View>
           </View>
           <View style={styles.contentContainer}>
@@ -265,6 +338,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
                   style={GlobalStyles.button}  
                   mode="contained" 
                   buttonColor={Colors.primary}
+                  disabled={countdownInProgress || calibrating}
                   onPress={submitSet}
                 >
                   <Text style={styles.startExerciseButtonText}>
@@ -296,7 +370,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
               </Text>
             </Button> 
             }
-            {(!needsCalibration && !setInProgress) &&
+            {(!needsCalibration && !setInProgress && !exerciseSetsComplete) &&
               <Button 
               style={GlobalStyles.button}  
               mode="contained"
@@ -309,6 +383,31 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
               </Text>
             </Button> 
             }
+            {(exerciseSetsComplete && !submittedPainRating) &&
+              <Button 
+                style={GlobalStyles.button}  
+                mode="contained"
+                disabled={countdownInProgress || calibrating}
+                buttonColor={Colors.primary}
+                onPress={submitPainRating}
+              >
+                <Text style={styles.startExerciseButtonText}>
+                  Submit Pain Rating
+                </Text>
+              </Button> 
+            }
+            {(exerciseSetsComplete && submittedPainRating) &&
+              <Button 
+                style={GlobalStyles.button}  
+                mode="contained"
+                disabled={countdownInProgress || calibrating}
+                buttonColor={Colors.primary}
+                onPress={submitSession}
+              >
+                <Text style={styles.startExerciseButtonText}>
+                  Finish Session
+                </Text>
+              </Button>}
         </View>
       </View>
       )}

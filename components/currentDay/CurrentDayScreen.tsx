@@ -15,6 +15,7 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   const [wantsFeedback, setWantsFeedback] = useState(true);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
+  const [dayFinished, setDayFinished] = useState(false);
 
   const [selectedExercise, setSelectedExercise] = useState<AssignedExercise>()
   const showHelpModal = () => setHelpModalVisible(true);
@@ -27,6 +28,14 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
     loadExercises()
     loadSession()
   }, [])
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadSession()
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const loadExercises = () => {
     axios.get(`http://localhost:8080/assigned_exercises`).then((response: any) => {
@@ -41,13 +50,13 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   const startOrContinueSession = () => {
     if (session) {
       console.log(`SESSION ID EXISTS: ${session.id}`)
-      navigation.navigate('ExerciseInProgressScreen', {session_id: session.id})
+      navigation.navigate('ExerciseInProgressScreen', {session_id: session.id, wants_feedback: wantsFeedback})
     } else {
       axios.post(`http://localhost:8080/sessions`, {}).then((response: any) => {
         setSession(response.data.data)
         console.log(`SESSION ID NEW: ${response.data.data.id}`)
         console.log('Session Created')
-        navigation.navigate('ExerciseInProgressScreen', {session_id: response.data.data.id})
+        navigation.navigate('ExerciseInProgressScreen', {session_id: response.data.data.id, wants_feedback: wantsFeedback})
       }).catch((error: any) => {
         console.log('Error creating Session: ')
         console.log(error)
@@ -75,6 +84,17 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
       }
     }).catch((error: any) => {
       console.log('Error finding Session: ')
+      console.log(error)
+    })
+
+    axios.get(`http://localhost:8080/sessions/recent`).then((response: any) => {
+      if (!response.data.error) {
+        console.log('Recently complete session Found')
+        setSession(undefined)
+        setDayFinished(true)
+      }
+    }).catch((error: any) => {
+      console.log('Error finding recently completed session: ')
       console.log(error)
     })
   }
@@ -143,6 +163,13 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
     <SafeAreaView>
       <View style={styles.container}>
         <View style={{width: '100%', paddingTop: '10%'}}>
+          {dayFinished &&
+            <View style={styles.sessionOptionsList}>
+              <View style={{...styles.sessionOptionsItem, backgroundColor: 'green', height: 50}}>
+                <Text style={{...GlobalStyles.appParagraphText, textAlign: 'center' }}>Session completed! you're done for the day.</Text>
+              </View>
+            </View>
+          }
           <View style={styles.headerContainer}>
             <Text style={GlobalStyles.appHeadingText}>Session Options:</Text>
           </View>
@@ -162,7 +189,8 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
         <View style={GlobalStyles.footerContainer}>
           <Button 
             style={GlobalStyles.button}  
-            mode="contained" 
+            mode="contained"
+            disabled={dayFinished}
             buttonColor={theme.colors.primary}
             onPress={startOrContinueSession}
           > 
