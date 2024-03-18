@@ -77,16 +77,6 @@ export const BluetoothTest = () => {
 
   return (
     <View>
-      <AirbnbRating
-        count={5}
-        selectedColor={Colors.primary}
-        reviews={["No pain", "Mild", "Moderate", "Severe", "Extreme"]}
-        defaultRating={3}
-        size={40}
-        onFinishRating={(rating) => console.log(rating)}
-        starContainerStyle={{gap: 10}}
-        reviewColor={Colors.primary}
-      />
       <Text>Bluetooth Test Component</Text>
       <Button title="Click for devices" onPress={scanAndConnect} />
       <Button title="Click to stop scan and disconnect" onPress={stopAndDisconnect} />

@@ -7,6 +7,7 @@ import { Button, Dialog, Modal, Portal, Switch, useTheme} from "react-native-pap
 import YoutubeIframe from "react-native-youtube-iframe";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
 import { styles } from "./CurrentDayScreenStyles";
+import { BaseURL } from "../../common/common";
 
 export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: any}) => {
   const theme = useTheme()
@@ -38,7 +39,7 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   }, [navigation]);
 
   const loadExercises = () => {
-    axios.get(`http://localhost:8080/assigned_exercises`).then((response: any) => {
+    axios.get(`${BaseURL}/assigned_exercises`).then((response: any) => {
       console.log("Assigned Exercises Loaded")
       setExercises(response.data.data)
     }).catch((error: any) => {
@@ -52,7 +53,7 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
       console.log(`SESSION ID EXISTS: ${session.id}`)
       navigation.navigate('ExerciseInProgressScreen', {session_id: session.id, wants_feedback: wantsFeedback})
     } else {
-      axios.post(`http://localhost:8080/sessions`, {}).then((response: any) => {
+      axios.post(`${BaseURL}/sessions`, {}).then((response: any) => {
         setSession(response.data.data)
         console.log(`SESSION ID NEW: ${response.data.data.id}`)
         console.log('Session Created')
@@ -65,7 +66,7 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   }
 
   const deleteSession = () => {
-    axios.delete(`http://localhost:8080/sessions/${session?.id}`, {}).then((response: any) => {
+    axios.delete(`${BaseURL}/sessions/${session?.id}`, {}).then((response: any) => {
         console.log('Session Deleted')
         setSession(undefined)
         hideDialog()
@@ -77,7 +78,7 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   }
 
   const loadSession = () => {
-    axios.get(`http://localhost:8080/sessions`).then((response: any) => {
+    axios.get(`${BaseURL}/sessions`).then((response: any) => {
       if (!response.data.error) {
         console.log('Session Found')
         setSession(response.data.data)
@@ -87,7 +88,7 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
       console.log(error)
     })
 
-    axios.get(`http://localhost:8080/sessions/recent`).then((response: any) => {
+    axios.get(`${BaseURL}/sessions/recent`).then((response: any) => {
       if (!response.data.error) {
         console.log('Recently complete session Found')
         setSession(undefined)
