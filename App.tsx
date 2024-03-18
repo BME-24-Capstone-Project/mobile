@@ -5,116 +5,100 @@
  * @format
  */
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { LoginScreen } from "./components/login/LoginScreen";
+import { CurrentDayScreen } from "./components/currentDay/CurrentDayScreen";
+import { MD3LightTheme as DefaultTheme, Icon, PaperProvider } from "react-native-paper";
+import { ExerciseInProgressScreen } from "./components/exerciseInProgressScreen/ExerciseInProgressScreen";
+import { GlobalStyles, Colors } from "./common/data-types/styles";
+import { Text, TouchableOpacity } from "react-native";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faArrowLeft, faCircle, faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { BluetoothTest } from "./components/BluetoothTest";
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-import {BluetoothTest} from './components/BluetoothTest';
+const Stack = createNativeStackNavigator();
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
 
-function Section({children, title}: SectionProps): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const theme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    ...Colors
+  },
+};
 
 function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <BluetoothTest />
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <PaperProvider theme={theme}>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen
+            options={{headerShown: false}}
+            name="Login"
+            component={LoginScreen}
+          />
+          <Stack.Screen
+            name="CurrentDayScreen"
+            component={CurrentDayScreen}
+            options={{ 
+              headerTitle: "Your Treatment Plan",
+              headerStyle: {
+                backgroundColor: theme.colors.primary
+              },
+              headerTitleStyle: {
+                ...GlobalStyles.appHeadingText,
+                color: theme.colors.secondary
+              },
+              // headerLeft: () => (
+              //   <TouchableOpacity onPress>
+              //     <FontAwesomeIcon size={30} icon={ faArrowLeft } />
+              //   </TouchableOpacity>
+              // )
+              headerBackTitle: "Back",
+            }}
+          />
+          <Stack.Screen
+            name="ExerciseInProgressScreen"
+            component={ExerciseInProgressScreen}
+            options={{
+              headerTitle: "Current Set",
+              headerBackTitle: "Back",
+              headerStyle: {
+                backgroundColor: theme.colors.primary
+              },
+              headerTitleStyle: {
+                ...GlobalStyles.appHeadingText,
+                color: theme.colors.secondary
+              },
+            }}
+            // options={{ title: "today" }}
+          />
+          <Stack.Screen
+            name="BluetoothTest"
+            component={BluetoothTest}
+            options={{ 
+              headerTitle: "Your Treatment Plan",
+              headerStyle: {
+                backgroundColor: theme.colors.primary
+              },
+              headerTitleStyle: {
+                ...GlobalStyles.appHeadingText,
+                color: theme.colors.secondary
+              },
+              // headerLeft: () => (
+              //   <TouchableOpacity onPress>
+              //     <FontAwesomeIcon size={30} icon={ faArrowLeft } />
+              //   </TouchableOpacity>
+              // )
+              headerBackTitle: "Back"
+            }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </PaperProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
 
 export default App;
