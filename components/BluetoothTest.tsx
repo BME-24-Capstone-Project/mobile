@@ -24,6 +24,7 @@ export const BluetoothTest = () => {
         console.log(error);
         return;
       }
+      console.log(device)
       if (device && (device.id == "08A17802-5E6A-8BB9-FA8F-2B9B3F4D3765" || device.name === "ESP32_BLE" || device.localName === "ESP32_BLE" )) {
         device.connect().then(device => {
           console.log("Connected to: " + device.name)

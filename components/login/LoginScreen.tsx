@@ -5,10 +5,14 @@ import { login } from "../../queries/login";
 import { useState } from "react";
 import { GlobalStyles } from "../../common/data-types/styles";
 import { BaseURL } from "../../common/common";
+import { BleManager } from "react-native-ble-plx";
 // import {decode as atob, encode as btoa} from "base-64"
 
+const manager = new BleManager
 
 export const LoginScreen = ({navigation}: {navigation: any}) => {
+
+  console.log(manager.connectedDevices)
 
   const theme = useTheme();
   const [username, setUsername] = useState("");
