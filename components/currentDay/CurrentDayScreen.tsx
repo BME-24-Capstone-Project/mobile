@@ -2,7 +2,7 @@ import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { SafeAreaView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { Button, Dialog, Modal, Portal, Switch, useTheme} from "react-native-paper";
 import YoutubeIframe from "react-native-youtube-iframe";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
@@ -17,6 +17,7 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dayFinished, setDayFinished] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   const [selectedExercise, setSelectedExercise] = useState<AssignedExercise>()
   const showHelpModal = () => setHelpModalVisible(true);
@@ -108,22 +109,35 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
           {(exercise.num_sets && exercise.num_sets > 1) && <Text style={GlobalStyles.appParagraphText}>Sets: {exercise.num_sets}</Text>}
           {(exercise.num_reps && exercise.num_reps > 1) && <Text style={GlobalStyles.appParagraphText}>Repetitions: {exercise.num_reps}</Text>}
           {exercise.distance && <Text style={GlobalStyles.appParagraphText}>Distance: {exercise.distance}m</Text>}
+          <View style={styles.youtubePlayerContainer}>
+            {exercise.exercise.video_id && (
+              <YoutubeIframe
+                height={200}
+                play={playing}
+                videoId={exercise.exercise.video_id}
+              />
+            )}
+            {exercise.note && (
+            <View style={{gap: 5}}>
+              <Text style={GlobalStyles.appSubHeadingText}>Physiotherapist's Notes:</Text>
+              <Text style={GlobalStyles.appParagraphText}>{exercise.note}</Text>
+            </View>
+            )}
+          </View>
         </View>
-        <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
+        {/* <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
           setSelectedExercise(exercise)
           showHelpModal()
         }}>
           <FontAwesomeIcon size={40} icon={ faCircleInfo } />
           <Text style={GlobalStyles.appParagraphText}>More Info</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     )
   }
 
 
   const HelpModal = ({assignedExercise}: {assignedExercise: AssignedExercise}) => {
-    
-    const [playing, setPlaying] = useState(false);
 
     return ( 
       <Portal>
@@ -163,30 +177,34 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
   return (
     <SafeAreaView>
       <View style={styles.container}>
-        <View style={{width: '100%', paddingTop: '10%'}}>
-          {dayFinished &&
+          <View style={styles.headerContainer}>
+            {/* {dayFinished && */}
+              <View style={styles.sessionOptionsList}>
+                <View style={{...styles.sessionOptionsItem, backgroundColor: 'green', height: 50}}>
+                  <Text style={{...GlobalStyles.appSubSubHeadingText, color: Colors.tertiary, textAlign: 'center' }}>Session completed! you're done for the day.</Text>
+                </View>
+              </View>
+            {/* } */}
+          </View>
+          <View style={styles.contentContainer}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{padding: 10}} style={styles.scrollView}>
+            <View style={styles.headerContainer}>
+              <Text style={GlobalStyles.appHeadingText}>Session Options:</Text>
+            </View>
             <View style={styles.sessionOptionsList}>
-              <View style={{...styles.sessionOptionsItem, backgroundColor: 'green', height: 50}}>
-                <Text style={{...GlobalStyles.appParagraphText, textAlign: 'center' }}>Session completed! you're done for the day.</Text>
+              <View style={styles.sessionOptionsItem}>
+                <Text style={GlobalStyles.appParagraphText}>Receive feedback on exercise form?</Text>
+                <Switch value={wantsFeedback} onValueChange={() => setWantsFeedback(!wantsFeedback)}></Switch>
               </View>
             </View>
-          }
-          <View style={styles.headerContainer}>
-            <Text style={GlobalStyles.appHeadingText}>Session Options:</Text>
-          </View>
-          <View style={styles.sessionOptionsList}>
-            <View style={styles.sessionOptionsItem}>
-              <Text style={GlobalStyles.appParagraphText}>Receive feedback on exercise form?</Text>
-              <Switch value={wantsFeedback} onValueChange={() => setWantsFeedback(!wantsFeedback)}></Switch>
+            <View style={styles.headerContainer}>
+              <Text style={GlobalStyles.appHeadingText}>Your Exercises:</Text>
             </View>
+            <View style={styles.exerciseList}>
+              {exerciseList ? exerciseList : <Text>No assigned exercies</Text>}
+            </View>
+            </ScrollView>
           </View>
-          <View style={styles.headerContainer}>
-            <Text style={GlobalStyles.appHeadingText}>Your Exercises:</Text>
-          </View>
-          <View style={styles.exerciseList}>
-            {exerciseList ? exerciseList : <Text>No assigned exercies</Text>}
-          </View>
-        </View>
         <View style={GlobalStyles.footerContainer}>
           <Button 
             style={GlobalStyles.button}  
@@ -200,7 +218,6 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
             </Text>
           </Button>
           {session && (
-            <>
               <Button 
                 style={GlobalStyles.button}  
                 mode="contained" 
@@ -211,36 +228,35 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
                   Cancel Session 
                 </Text>
               </Button>
-              <Portal>
-                <Dialog visible={dialogVisible} style={{backgroundColor: Colors.secondary}} onDismiss={hideDialog}>
-                  <Dialog.Title>Are you sure?</Dialog.Title>
-                  <Dialog.Content>
-                    <Text style={GlobalStyles.appParagraphText}>Are you sure you would like to cancel your current session?</Text>
-                  </Dialog.Content>
-                  <Dialog.Actions>
-                    <Button onPress={deleteSession}>
-                      <Text style={{
-                        ...GlobalStyles.appSubHeadingText,
-                        color: "red",
-                      }}>
-                        Yes
-                      </Text>
-                    </Button>
-                    <Button onPress={hideDialog}>
-                      <Text style={GlobalStyles.appSubHeadingText}>
-                        No
-                      </Text>
-                    </Button>
-                  </Dialog.Actions>
-                </Dialog>
-              </Portal>
-            </>
           )}
         </View>
       </View>
       {selectedExercise && (
         <HelpModal assignedExercise={selectedExercise}/>
       )}
+      <Portal>
+        <Dialog visible={dialogVisible} style={{backgroundColor: Colors.secondary}} onDismiss={hideDialog}>
+          <Dialog.Title>Are you sure?</Dialog.Title>
+          <Dialog.Content>
+            <Text style={GlobalStyles.appParagraphText}>Are you sure you would like to cancel your current session?</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={deleteSession}>
+              <Text style={{
+                ...GlobalStyles.appSubHeadingText,
+                color: "red",
+              }}>
+                Yes
+              </Text>
+            </Button>
+            <Button onPress={hideDialog}>
+              <Text style={GlobalStyles.appSubHeadingText}>
+                No
+              </Text>
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </SafeAreaView>
   );
 };

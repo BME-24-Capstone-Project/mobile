@@ -255,7 +255,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
       )
     } else if (exerciseSetsComplete && submittedPainRating) {
       return (
-        <ScrollView scrollEnabled={false} keyboardShouldPersistTaps='handled' contentContainerStyle={{paddingTop: '40%'}}>
+        <ScrollView scrollEnabled={false} keyboardShouldPersistTaps='handled' contentContainerStyle={{paddingTop: '15%'}}>
         <View style={{alignItems: "center", gap: 50, width: '100%', padding: 30}}>
           <Text style={GlobalStyles.appHeadingText}>Include any notes for your physiotherapist below.</Text>
           <TextInput
