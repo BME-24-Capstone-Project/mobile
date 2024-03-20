@@ -12,8 +12,6 @@ const manager = new BleManager
 
 export const LoginScreen = ({navigation}: {navigation: any}) => {
 
-  console.log(manager.connectedDevices)
-
   const theme = useTheme();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -51,7 +49,7 @@ export const LoginScreen = ({navigation}: {navigation: any}) => {
 
   return (
     <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.secondary}}> 
-    <ScrollView scrollEnabled={false} keyboardShouldPersistTaps='handled' style={{width: '100%'}} contentContainerStyle={{alignContent: 'center', alignItems: 'center', flexGrow: 1, paddingTop: '50%'}}>
+    <ScrollView scrollEnabled={false} keyboardShouldPersistTaps='handled' style={{width: '100%'}} contentContainerStyle={{alignContent: 'center', alignItems: 'center', flexGrow: 1, paddingTop: '30%'}}>
       <Image style={styles.image} source={require('../../assets/arthrosync-logo.png')}/>
       <View style={styles.loginContainer}>
         

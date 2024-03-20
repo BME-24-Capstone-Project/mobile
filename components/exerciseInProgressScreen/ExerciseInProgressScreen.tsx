@@ -7,6 +7,9 @@ import LottieView from "lottie-react-native";
 import { BleManager } from "react-native-ble-plx";
 import { AirbnbRating } from "react-native-ratings";
 import { BaseURL } from "../../common/common";
+import { FeedbackMappings, Feedback } from "../../common/feedback";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
 
 // add "done calibrating screen"
 // add images of calibration poses
@@ -17,8 +20,6 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   const manager = new BleManager();
 
   const session_id = route.params.session_id
-  console.log("Params wants feedback")
-  console.log(route.params.wants_feedback)
   const [currentSetAndSessionData, setCurrentSetAndSessionData] = useState<CurrentSetAndSessionData>()
   const [setInProgress, setSetInProgress] = useState<boolean>(false)
   const [countdownInProgress, setCountdownInProgress] = useState<boolean>(false)
@@ -67,8 +68,6 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   }, [calibrating]);
 
   useEffect(() => {
-    console.log("wants feedback")
-    console.log(wantsFeedback)
     //add bluetooth calibrate code
     if (loadingFeedback) {
       axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, {
@@ -90,49 +89,15 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
       
       setTimeout(() => {
         setLoadingFeedback(false)
+        // Will need to change this based on above
+        const integerObtainedFromResponse = 1
         if (wantsFeedback) {
-          setFeedbackFromPrev({
-            error_mode: "Error Mode.",
-            instructions: "Do this instead of that."
-          })
+          const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
+          setFeedbackFromPrev(feedback)
         }
       }, 1000)
     }
   }, [loadingFeedback]);
-
-  // function scanAndConnect() {
-  //   axios.get(`${BaseURL}/device`).then((response: any) => {
-  //     console.log(response.data)
-  //     setDeviceData(response.data.data)
-  //     console.log("Scan Started")
-  //     manager.startDeviceScan(null, null, (error, device) => {
-  //     if (error) {
-  //       // Handle error (scanning will be stopped automatically)
-  //       console.log('Error while scanning devices');
-  //       console.log(error);
-  //       return;
-  //     }
-  //     if (device && (device.name === response.data.data.name || device.localName === response.data.data.name )) {
-  //       device.connect().then(device => {
-  //         console.log("Connected to: " + device.name)
-  //         setConnectedDevice(device)
-  //         device.discoverAllServicesAndCharacteristics()
-  //       }).catch(error => {
-  //         console.log("Error connecting to device: ")
-  //         console.log(error)
-  //         manager.stopDeviceScan()
-  //       })
-  //       manager.stopDeviceScan()
-  //     }
-  //     });
-  //   }).catch((error: any) => {
-  //     console.log("Error Getting device id")
-  //     console.log(error);
-  //   })
-    
-  // }
-
-  
 
   const loadCurrentExerciseAndSessionData = () => {
     if (!exerciseSetsComplete) {
@@ -207,10 +172,13 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
       return (<Text style={{...GlobalStyles.appHeadingText, fontSize: 100}}>{countdownValue}</Text>)
     } else if (feedbackFromPrev && !needsCalibration && !calibrating && !exerciseSetsComplete) {
       return (
-        <>
+        <View style={{alignContent: 'center', justifyContent:'center', alignItems:'center', gap: 15}}>
+          {(feedbackFromPrev.feedback === 1 || feedbackFromPrev.feedback === 6) && 
+            <FontAwesomeIcon icon={faCheck} size={100} color="green"/>
+          }
           <Text style={GlobalStyles.appHeadingText}>{feedbackFromPrev.error_mode}</Text>
-          <Text style={GlobalStyles.appLargeParagraphText}>Feedback shows here</Text>
-        </>
+          <Text style={GlobalStyles.appLargeParagraphText}>{feedbackFromPrev.instructions}</Text>
+        </View>
       )
       
     } else if (setInProgress) {

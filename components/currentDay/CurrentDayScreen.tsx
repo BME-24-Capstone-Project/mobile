@@ -7,9 +7,17 @@ import { Button, Dialog, Modal, Portal, Switch, useTheme} from "react-native-pap
 import YoutubeIframe from "react-native-youtube-iframe";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
 import { styles } from "./CurrentDayScreenStyles";
-import { BaseURL } from "../../common/common";
+import { BaseURL, Manager } from "../../common/common";
 
 export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: any}) => {
+
+  Manager.isDeviceConnected("6925A9FE-1315-A249-4FD9-F142C068E6DC").then((response) => {
+    console.log('response')
+    console.log(response)
+  }).catch((error) => {
+    console.log(error)
+  })
+
   const theme = useTheme()
   const [exercises, setExercises] = useState<AssignedExercise[]>()
   const [session, setSession] = useState<Session>()
@@ -178,13 +186,13 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
     <SafeAreaView>
       <View style={styles.container}>
           <View style={styles.headerContainer}>
-            {/* {dayFinished && */}
+            {dayFinished &&
               <View style={styles.sessionOptionsList}>
                 <View style={{...styles.sessionOptionsItem, backgroundColor: 'green', height: 50}}>
-                  <Text style={{...GlobalStyles.appSubSubHeadingText, color: Colors.tertiary, textAlign: 'center' }}>Session completed! you're done for the day.</Text>
+                  <Text style={{...GlobalStyles.appSubSubHeadingText, color: Colors.tertiary, textAlign: 'center' }}>Session completed! You're done for the day.</Text>
                 </View>
               </View>
-            {/* } */}
+            }
           </View>
           <View style={styles.contentContainer}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{padding: 10}} style={styles.scrollView}>
