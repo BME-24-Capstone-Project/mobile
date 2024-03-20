@@ -35,39 +35,21 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   const [note, setNote] = useState<string>("")
   const [wantsFeedback, setWantsFeedback] = useState<boolean>(route.params.wants_feedback)
 
+  let exerciseData = useRef({
+    'acc_x': [[], []],
+    'acc_y': [[], []],
+    'acc_z': [[], []],
+    'roll': [[], []],
+    'pitch': [[], []],
+    'yaw': [[], []],
+    'angle': []
+  })
+
   // could show previous exercises feedback on next exercise page. 
   useEffect(() => {
     loadCurrentExerciseAndSessionData()
     // scanAndConnect()
   }, [])
-
-  useEffect(() => {
-    if (countdownInProgress) {
-        const interval = setInterval(() => {
-          setCountdownValue((prevCount) => {
-            if (prevCount === 1) {
-              () => clearInterval(interval);
-              setCountdownInProgress(false);
-              return 3
-            } else if (prevCount === 3) {
-              Manager.discoverAllServicesAndCharacteristicsForDevice(DEVICE_UUID).then((device) => {
-                device.services().then((services) => {
-                  services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('20')).catch((error) => {
-                    console.log(error)
-                  })
-                }).catch((error) => {
-                  console.log(error)
-                })
-              }).catch((error) => {
-                console.log(error)
-              })
-            }
-            return prevCount - 1;
-          });
-        }, 1000);
-        return () => clearInterval(interval)
-    }
-  }, [countdownInProgress]);
 
   useEffect(() => {
     if (calibrating) {
@@ -97,35 +79,114 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   }, [calibrating]);
 
   useEffect(() => {
+    if (countdownInProgress) {
+        const interval = setInterval(() => {
+          setCountdownValue((prevCount) => {
+            if (prevCount === 1) {
+              () => clearInterval(interval);
+              setCountdownInProgress(false);
+              Manager.discoverAllServicesAndCharacteristicsForDevice(DEVICE_UUID).then((device) => {
+                device.services().then((services) => {
+                  services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('20')).then(() => {
+                    services[0].monitorCharacteristic(DATA_CHARACTERISTIC_UUID, (error, characteristic) => {
+                      if (!error && characteristic) {
+                        characteristic.read().then((characteristic) => {
+                          if (characteristic.value) {
+                            const payload = JSON.parse(base64.decode(characteristic.value))
+                            exerciseData.current.acc_x[0] = [...exerciseData.current.acc_x[0], payload['acc_x_1']] as never
+                            exerciseData.current.acc_x[1] = [...exerciseData.current.acc_x[1], payload['acc_x_2']] as never
+                            exerciseData.current.acc_y[0] = [...exerciseData.current.acc_y[0], payload['acc_y_1']] as never
+                            exerciseData.current.acc_y[1] = [...exerciseData.current.acc_y[1], payload['acc_y_2']] as never
+                            exerciseData.current.acc_z[0] = [...exerciseData.current.acc_z[0], payload['acc_z_1']] as never
+                            exerciseData.current.acc_z[1] = [...exerciseData.current.acc_z[1], payload['acc_z_2']] as never
+                            exerciseData.current.roll[0] = [...exerciseData.current.roll[0], payload['roll_1']] as never
+                            exerciseData.current.roll[1] = [...exerciseData.current.roll[1], payload['roll_2']] as never
+                            exerciseData.current.yaw[0] = [...exerciseData.current.yaw[0], payload['yaw_1']] as never
+                            exerciseData.current.yaw[1] = [...exerciseData.current.yaw[1], payload['yaw_2']] as never
+                            exerciseData.current.pitch[0] = [...exerciseData.current.pitch[0], payload['pitch_1']] as never
+                            exerciseData.current.pitch[1] = [...exerciseData.current.pitch[1], payload['pitch_2']] as never
+                            exerciseData.current.angle = [...exerciseData.current.angle, payload['angle']] as never
+                            // axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, JSON.parse(base64.decode(characteristic.value))).then((response: any) => {
+                            //   //replace below with integerObtainedFromResponse(response.data.data)
+                            //   const integerObtainedFromResponse = 1
+                            //   if (wantsFeedback) {
+                            //     const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
+                            //     setFeedbackFromPrev(feedback)
+                            //   }
+                            //   setLoadingFeedback(false)
+                            //   loadCurrentExerciseAndSessionData()
+                            // }).catch((error: any) => {
+                            //   console.log('Error creating exercise set: ')
+                            //   console.log(error)
+                            // })
+                          }
+                        }).catch((error) => {
+                          console.log(error)
+                        })
+                      }
+                      if (error) {
+                        console.log(error)
+                      }
+                    })
+                  }).catch((error) => {
+                    console.log(error)
+                  })
+                }).catch((error) => {
+                  console.log(error)
+                })
+              }).catch((error) => {
+                console.log(error)
+              })
+              return 3
+            }
+            return prevCount - 1;
+          });
+        }, 1000);
+        return () => clearInterval(interval)
+    }
+  }, [countdownInProgress]);
+
+  useEffect(() => {
     //add bluetooth calibrate code
     if (loadingFeedback) {
       Manager.discoverAllServicesAndCharacteristicsForDevice(DEVICE_UUID).then((device) => {
         device.services().then((services) => {
           services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then(() => {
-            services[0].monitorCharacteristic(DATA_CHARACTERISTIC_UUID, (error, characteristic) => {
-              if (!error && characteristic) {
-                characteristic.read().then((characteristic) => {
-                  if (characteristic.value) {
-                    console.log(JSON.parse(base64.decode(characteristic.value)))
-                    axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, JSON.parse(base64.decode(characteristic.value))).then((response: any) => {
-                      //replace below with integerObtainedFromResponse(response.data.data)
-                      const integerObtainedFromResponse = 1
-                      if (wantsFeedback) {
-                        const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
-                        setFeedbackFromPrev(feedback)
-                      }
-                      setLoadingFeedback(false)
-                      loadCurrentExerciseAndSessionData()
-                    }).catch((error: any) => {
-                      console.log('Error creating exercise set: ')
-                      console.log(error)
-                    })
-                  }
-                }).catch((error) => {
-                  console.log(error)
-                })
-              }
-            })
+            console.log('wrote to characteristic')
+            console.log(exerciseData.current)
+            // services[0].monitorCharacteristic(DATA_CHARACTERISTIC_UUID, (error, characteristic) => {
+            //   console.log("Notified here")
+            //   if (!error && characteristic) {
+            //     // console.log(characteristic.value)
+            //     characteristic.read().then((characteristic) => {
+            //       console.log("Got notified")
+            //       console.log(characteristic.value)
+            //       if (characteristic.value) {
+            //         console.log(JSON.parse(base64.decode(characteristic.value)))
+            //         // axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, JSON.parse(base64.decode(characteristic.value))).then((response: any) => {
+            //         //   //replace below with integerObtainedFromResponse(response.data.data)
+            //         //   const integerObtainedFromResponse = 1
+            //         //   if (wantsFeedback) {
+            //         //     const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
+            //         //     setFeedbackFromPrev(feedback)
+            //         //   }
+            //         //   setLoadingFeedback(false)
+            //         //   loadCurrentExerciseAndSessionData()
+            //         // }).catch((error: any) => {
+            //         //   console.log('Error creating exercise set: ')
+            //         //   console.log(error)
+            //         // })
+            //       }
+            //     }).catch((error) => {
+            //       console.log(error)
+            //     })
+            //   }
+            //   if (error) {
+            //     console.log(error)
+            //   }
+            // })
+          }).catch((error) => {
+            console.log(error)
           })
         }).catch((error) => {
           console.log(error)
@@ -133,32 +194,32 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
       }).catch((error) => {
         console.log(error)
       })
-      axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, {
-        acc_x: [],
-        acc_y: [],
-        acc_z: [],
-        roll: [],
-        pitch: [],
-        yaw: [],
-        angle: [],
-      }).then((response: any) => {
-        //setFeedbackFromPrev(response.data.data)
-        console.log('here')
-        loadCurrentExerciseAndSessionData()
-      }).catch((error: any) => {
-        console.log('Error creating Session: ')
-        console.log(error)
-      })
+      // axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, {
+      //   acc_x: [],
+      //   acc_y: [],
+      //   acc_z: [],
+      //   roll: [],
+      //   pitch: [],
+      //   yaw: [],
+      //   angle: [],
+      // }).then((response: any) => {
+      //   //setFeedbackFromPrev(response.data.data)
+      //   console.log('here')
+      //   loadCurrentExerciseAndSessionData()
+      // }).catch((error: any) => {
+      //   console.log('Error creating Session: ')
+      //   console.log(error)
+      // })
       
-      setTimeout(() => {
-        setLoadingFeedback(false)
-        // Will need to change this based on above
-        const integerObtainedFromResponse = 1
-        if (wantsFeedback) {
-          const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
-          setFeedbackFromPrev(feedback)
-        }
-      }, 1000)
+      // setTimeout(() => {
+      //   setLoadingFeedback(false)
+      //   // Will need to change this based on above
+      //   const integerObtainedFromResponse = 1
+      //   if (wantsFeedback) {
+      //     const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
+      //     setFeedbackFromPrev(feedback)
+      //   }
+      // }, 1000)
     }
   }, [loadingFeedback]);
 
@@ -171,7 +232,6 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
         } else if (!response.data.data) {
           console.log("No response data received, sets complete")
           setExerciseSetsComplete(true);
-
         }
       }).catch((error: any) => {
         console.log("Error Getting currentSetAndSessionData")
@@ -313,7 +373,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
       </View>
       )
     } else if (needsCalibration) {
-      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Please get in position and press "Start Calibrating" to calibrate your device for the current exercise.</Text>
+      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Please get in position and press "Start Calibrating"</Text>
     } 
      else {
       return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Press "Start Set" to get started!</Text>

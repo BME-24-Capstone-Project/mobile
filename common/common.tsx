@@ -1,7 +1,7 @@
 import { BleManager } from "react-native-ble-plx"
 
 // export const BaseURL = "http://localhost:8080"
-export const BaseURL = "https://da8e-2620-101-f000-740-00-1951.ngrok-free.app"
+export const BaseURL = "https://f29e-2620-101-f000-740-00-1951.ngrok-free.app"
 
 
 export const Manager = new BleManager
