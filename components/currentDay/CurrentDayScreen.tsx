@@ -8,28 +8,19 @@ import YoutubeIframe from "react-native-youtube-iframe";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
 import { styles } from "./CurrentDayScreenStyles";
 import { BaseURL, Manager } from "../../common/common";
+import { useBluetooth } from "../providers/bluetooth";
 
 export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: any}) => {
-
-  Manager.isDeviceConnected("6925A9FE-1315-A249-4FD9-F142C068E6DC").then((response) => {
-    console.log('response')
-    console.log(response)
-  }).catch((error) => {
-    console.log(error)
-  })
 
   const theme = useTheme()
   const [exercises, setExercises] = useState<AssignedExercise[]>()
   const [session, setSession] = useState<Session>()
   const [wantsFeedback, setWantsFeedback] = useState(true);
-  const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dayFinished, setDayFinished] = useState(false);
   const [playing, setPlaying] = useState(false);
-
   const [selectedExercise, setSelectedExercise] = useState<AssignedExercise>()
-  const showHelpModal = () => setHelpModalVisible(true);
-  const hideHelpModal = () => setHelpModalVisible(false);
+  
   const showDialog = () => setDialogVisible(true);
   const hideDialog = () => setDialogVisible(false);
   let exerciseList = undefined;
@@ -133,53 +124,8 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
             )}
           </View>
         </View>
-        {/* <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
-          setSelectedExercise(exercise)
-          showHelpModal()
-        }}>
-          <FontAwesomeIcon size={40} icon={ faCircleInfo } />
-          <Text style={GlobalStyles.appParagraphText}>More Info</Text>
-        </TouchableOpacity> */}
       </View>
     )
-  }
-
-
-  const HelpModal = ({assignedExercise}: {assignedExercise: AssignedExercise}) => {
-
-    return ( 
-      <Portal>
-        <Modal visible={helpModalVisible} onDismiss={hideHelpModal} contentContainerStyle={styles.modalContainerStyle}>
-          <TouchableOpacity onPress={hideHelpModal}>
-            <FontAwesomeIcon size={30} icon={ faXmark }/>
-          </TouchableOpacity>
-          <View style={styles.youtubePlayerContainer}>
-            {assignedExercise.exercise.video_id && (
-              <YoutubeIframe
-                height={200}
-                play={playing}
-                videoId={assignedExercise.exercise.video_id}
-              />
-            )}
-            {assignedExercise.note && (
-            <View style={{gap: 5}}>
-              <Text style={GlobalStyles.appSubHeadingText}>Physiotherapist's Notes:</Text>
-              <Text style={GlobalStyles.appParagraphText}>{assignedExercise.note}</Text>
-            </View>
-            )}
-          </View>
-          <Button
-            mode="contained" 
-            buttonColor='red'
-            onPress={hideHelpModal}
-          >
-            <Text style={GlobalStyles.buttonText}>
-              Close Modal
-            </Text>
-          </Button>
-        </Modal>
-      </Portal>
-    ) 
   }
 
   return (

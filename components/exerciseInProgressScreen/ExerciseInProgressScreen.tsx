@@ -4,12 +4,13 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, ProgressBar, TextInput} from "react-native-paper";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
 import LottieView from "lottie-react-native";
-import { BleManager } from "react-native-ble-plx";
 import { AirbnbRating } from "react-native-ratings";
-import { BaseURL } from "../../common/common";
+import { BaseURL, Manager, DEVICE_UUID, CONTROL_CHARACTERISTIC_UUID, DATA_CHARACTERISTIC_UUID } from "../../common/common";
 import { FeedbackMappings, Feedback } from "../../common/feedback";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import base64 from 'base-64';
+import { Characteristic } from "react-native-ble-plx";
 
 // add "done calibrating screen"
 // add images of calibration poses
@@ -17,7 +18,6 @@ import { faCheck } from "@fortawesome/free-solid-svg-icons";
 // remove calibrating
 
 export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, route: any}) => {
-  const manager = new BleManager();
 
   const session_id = route.params.session_id
   const [currentSetAndSessionData, setCurrentSetAndSessionData] = useState<CurrentSetAndSessionData>()
@@ -25,7 +25,6 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   const [countdownInProgress, setCountdownInProgress] = useState<boolean>(false)
   const [countdownValue, setCountdownValue] = useState<number>(3)
   const [feedbackFromPrev, setFeedbackFromPrev] = useState<Feedback>()
-  const [connectedDevice, setConnectedDevice] = useState<any>()
   const [deviceData, setDeviceData] = useState<any>()
   const [loadingFeedback, setLoadingFeedback] = useState<boolean>(false)
   const [exerciseSetsComplete, setExerciseSetsComplete] = useState<boolean>(false)
@@ -50,6 +49,18 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
               () => clearInterval(interval);
               setCountdownInProgress(false);
               return 3
+            } else if (prevCount === 3) {
+              Manager.discoverAllServicesAndCharacteristicsForDevice(DEVICE_UUID).then((device) => {
+                device.services().then((services) => {
+                  services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('20')).catch((error) => {
+                    console.log(error)
+                  })
+                }).catch((error) => {
+                  console.log(error)
+                })
+              }).catch((error) => {
+                console.log(error)
+              })
             }
             return prevCount - 1;
           });
@@ -59,17 +70,69 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   }, [countdownInProgress]);
 
   useEffect(() => {
-    //add bluetooth calibrate code
     if (calibrating) {
-      setTimeout(() => {
-        setCalibrating(false)
-      }, 1000)
+      Manager.discoverAllServicesAndCharacteristicsForDevice(DEVICE_UUID).then((device) => {
+        device.services().then((services) => {
+          services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('10')).then((characteristic) => {
+            characteristic.monitor((error, characteristic) => {
+              if (!error && characteristic) {
+                characteristic.read().then((characteristic) => {
+
+                  if (characteristic.value &&base64.decode(characteristic.value) === "11") {
+                    setCalibrating(false)
+                  }
+                }).catch((error) => {
+                  console.log(error)
+                })
+              }
+            })
+          })
+        }).catch((error) => {
+          console.log(error)
+        })
+      }).catch((error) => {
+        console.log(error)
+      })
     }
   }, [calibrating]);
 
   useEffect(() => {
     //add bluetooth calibrate code
     if (loadingFeedback) {
+      Manager.discoverAllServicesAndCharacteristicsForDevice(DEVICE_UUID).then((device) => {
+        device.services().then((services) => {
+          services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then(() => {
+            services[0].monitorCharacteristic(DATA_CHARACTERISTIC_UUID, (error, characteristic) => {
+              if (!error && characteristic) {
+                characteristic.read().then((characteristic) => {
+                  if (characteristic.value) {
+                    console.log(JSON.parse(base64.decode(characteristic.value)))
+                    axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, JSON.parse(base64.decode(characteristic.value))).then((response: any) => {
+                      //replace below with integerObtainedFromResponse(response.data.data)
+                      const integerObtainedFromResponse = 1
+                      if (wantsFeedback) {
+                        const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
+                        setFeedbackFromPrev(feedback)
+                      }
+                      setLoadingFeedback(false)
+                      loadCurrentExerciseAndSessionData()
+                    }).catch((error: any) => {
+                      console.log('Error creating exercise set: ')
+                      console.log(error)
+                    })
+                  }
+                }).catch((error) => {
+                  console.log(error)
+                })
+              }
+            })
+          })
+        }).catch((error) => {
+          console.log(error)
+        })
+      }).catch((error) => {
+        console.log(error)
+      })
       axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, {
         acc_x: [],
         acc_y: [],
@@ -246,7 +309,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
           autoPlay
           loop
         />
-        <Text style={GlobalStyles.appHeadingText}>Calibrating device</Text>
+        <Text style={{...GlobalStyles.appHeadingText, textAlign: 'center'}}>Calibrating device. Please sit perfectly still.</Text>
       </View>
       )
     } else if (needsCalibration) {
