@@ -17,6 +17,7 @@ import { BluetoothTest } from "./components/BluetoothTest";
 import { BluetoothConnectionIndicator } from "./components/BluetoothConnectionIndicator";
 import { Device } from "react-native-ble-plx";
 import { Manager } from "./common/common";
+import base64 from "base-64";
 
 const Stack = createNativeStackNavigator();
 
@@ -59,6 +60,10 @@ function App(): JSX.Element {
               console.log("Device Disconnected")
               setConnectedDevice(null)
             })
+              Manager.discoverAllServicesAndCharacteristicsForDevice(device.id).then((device) => {}).catch((err) => {
+                  console.log(err)
+              })
+
             setConnectedDevice(device)
           }).catch(error => {
             console.log("Error connecting to device: ")
@@ -84,7 +89,7 @@ function App(): JSX.Element {
             <Stack.Screen
               name="CurrentDayScreen"
               component={CurrentDayScreen}
-              options={{ 
+              options={{
                 headerTitle: "Your Treatment Plan",
                 headerStyle: {
                   backgroundColor: theme.colors.primary
@@ -104,7 +109,7 @@ function App(): JSX.Element {
             />
             <Stack.Screen
               name="ExerciseInProgressScreen"
-              component={ExerciseInProgressScreen}
+                children={(props) => <ExerciseInProgressScreen {...props} isDeviceConnected={!!connectedDevice}/>}
               options={{
                 headerTitle: "Current Set",
                 headerBackTitle: "Back",
