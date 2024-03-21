@@ -10,11 +10,11 @@ import { FeedbackMappings, Feedback } from "../../common/feedback";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import base64 from 'base-64';
-import { Characteristic, Subscription } from "react-native-ble-plx";
+import { Characteristic, Device, Subscription } from "react-native-ble-plx";
 import * as child_process from "child_process";
 import YoutubeIframe from "react-native-youtube-iframe";
 
-export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}: {navigation: any, route: any, isDeviceConnected: boolean}) => {
+export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {navigation: any, route: any, connectedDevice: Device | null}) => {
 
 
   const session_id = route.params.session_id
@@ -46,89 +46,98 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
     'angle': []
   })
 
+  const setupDeviceDisconnectMonitor = () => {
+    return connectedDevice?.onDisconnected((error, device) => {
+      cancelSet()
+      setLoadingFeedback(false)
+      setFeedbackError("Error generating feedback. ")
+      setCalibrating(false)
+      setStartSetText("Device disconnected. Please try again.")
+    })
+  }
+
+  const setupBleMonitors = () => {
+    let characteristicMonitors: Subscription[] = []
+    connectedDevice?.services().then((services) => {
+      services[0].characteristics().then((characteristics) => {
+        characteristics.map((characteristic) => {
+          characteristicMonitors.push(characteristic.monitor((error, characteristic) => {
+            if(characteristic?.uuid === CONTROL_CHARACTERISTIC_UUID) {
+              if(error) {
+                console.log(error)
+              } else {
+                if(characteristic?.value && base64.decode(characteristic.value) === "11") {
+                    setCalibrating(false)
+                }
+              }
+            } else {
+              if(error) {
+                console.log(error)
+              } else {
+                if(characteristic?.value) {
+                    const payload = JSON.parse(base64.decode(characteristic.value))
+                    exerciseData.current.acc_x[0] = [...exerciseData.current.acc_x[0], payload['acc_x_1']] as never
+                    exerciseData.current.acc_x[1] = [...exerciseData.current.acc_x[1], payload['acc_x_2']] as never
+                    exerciseData.current.acc_y[0] = [...exerciseData.current.acc_y[0], payload['acc_y_1']] as never
+                    exerciseData.current.acc_y[1] = [...exerciseData.current.acc_y[1], payload['acc_y_2']] as never
+                    exerciseData.current.acc_z[0] = [...exerciseData.current.acc_z[0], payload['acc_z_1']] as never
+                    exerciseData.current.acc_z[1] = [...exerciseData.current.acc_z[1], payload['acc_z_2']] as never
+                    exerciseData.current.roll[0] = [...exerciseData.current.roll[0], payload['roll_1']] as never
+                    exerciseData.current.roll[1] = [...exerciseData.current.roll[1], payload['roll_2']] as never
+                    exerciseData.current.yaw[0] = [...exerciseData.current.yaw[0], payload['yaw_1']] as never
+                    exerciseData.current.yaw[1] = [...exerciseData.current.yaw[1], payload['yaw_2']] as never
+                    exerciseData.current.pitch[0] = [...exerciseData.current.pitch[0], payload['pitch_1']] as never
+                    exerciseData.current.pitch[1] = [...exerciseData.current.pitch[1], payload['pitch_2']] as never
+                    exerciseData.current.angle = [...exerciseData.current.angle, payload['angle']] as never
+                }
+              }
+            }
+          }))
+        })
+      })
+    })
+    return characteristicMonitors
+  }
+
   useEffect(() => {
     loadCurrentExerciseAndSessionData()
   }, [])
 
   useEffect(() => {
-    let controlCharMonitor: Subscription | null = null;
-    if (calibrating) {
-        Manager.devices([DEVICE_UUID]).then((devices) => {
-            devices[0].services().then((services) => {
-                services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('10')).then((characteristic) => {
-                    controlCharMonitor = characteristic.monitor((error, characteristic) => {
-                        if(error) {
-                            console.log(error)
-                        } else {
-                            if(characteristic?.value && base64.decode(characteristic.value) === "11") {
-                                setCalibrating(false)
-                            }
-                        }
-                    })
-                }).catch((err) => {
-                    console.log(err)
-                })
-            }).catch((err) => {
-                console.log(err)
-            })
-        }).catch((err) => {
-            console.log(err)
-        })
+    let characteristicMonitors: Subscription[];
+    let disconnectMonitor: Subscription | undefined;
+    if(connectedDevice) {
+      disconnectMonitor = setupDeviceDisconnectMonitor()
+      characteristicMonitors = setupBleMonitors()
     }
 
     return () => {
-      controlCharMonitor?.remove()
+      characteristicMonitors.map((monitor) => {
+        monitor.remove()
+      })
+      disconnectMonitor?.remove()
     }
-  }, [calibrating]);
+  }, [connectedDevice])
 
   useEffect(() => {
-    let dataCharMonitor: Subscription | null = null;
+    if (calibrating && connectedDevice) {
+        connectedDevice.services().then((services) => {
+          services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('10')).then((characteristic) => {})
+        }).catch((err) => {
+          console.log(err)
+        })
+    }
+  }, [calibrating, connectedDevice]);
+
+  useEffect(() => {
     if (countdownInProgress) {
         const interval = setInterval(() => {
           setCountdownValue((prevCount) => {
             if (prevCount === 1) {
               () => clearInterval(interval);
               setCountdownInProgress(false);
-              Manager.devices([DEVICE_UUID]).then((devices) => {
-                  devices[0].onDisconnected((error, device) => {
-                      cancelSet()
-                      setLoadingFeedback(false)
-                      setFeedbackError("Error generating feedback. ")
-                      setCalibrating(false)
-                      setStartSetText("Device disconnected. Please try again.")
-                  })
-                  devices[0].services().then((services) => {
-                      services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('20')).then((characteristic) => {
-                        dataCharMonitor = services[0].monitorCharacteristic(DATA_CHARACTERISTIC_UUID, (err, characteristic) => {
-                              if(err) {
-                                  console.log(err)
-                              } else {
-                                  if(characteristic?.value) {
-                                      const payload = JSON.parse(base64.decode(characteristic.value))
-                                      exerciseData.current.acc_x[0] = [...exerciseData.current.acc_x[0], payload['acc_x_1']] as never
-                                      exerciseData.current.acc_x[1] = [...exerciseData.current.acc_x[1], payload['acc_x_2']] as never
-                                      exerciseData.current.acc_y[0] = [...exerciseData.current.acc_y[0], payload['acc_y_1']] as never
-                                      exerciseData.current.acc_y[1] = [...exerciseData.current.acc_y[1], payload['acc_y_2']] as never
-                                      exerciseData.current.acc_z[0] = [...exerciseData.current.acc_z[0], payload['acc_z_1']] as never
-                                      exerciseData.current.acc_z[1] = [...exerciseData.current.acc_z[1], payload['acc_z_2']] as never
-                                      exerciseData.current.roll[0] = [...exerciseData.current.roll[0], payload['roll_1']] as never
-                                      exerciseData.current.roll[1] = [...exerciseData.current.roll[1], payload['roll_2']] as never
-                                      exerciseData.current.yaw[0] = [...exerciseData.current.yaw[0], payload['yaw_1']] as never
-                                      exerciseData.current.yaw[1] = [...exerciseData.current.yaw[1], payload['yaw_2']] as never
-                                      exerciseData.current.pitch[0] = [...exerciseData.current.pitch[0], payload['pitch_1']] as never
-                                      exerciseData.current.pitch[1] = [...exerciseData.current.pitch[1], payload['pitch_2']] as never
-                                      exerciseData.current.angle = [...exerciseData.current.angle, payload['angle']] as never
-                                  }
-                              }
-                          })
-                      }).catch((err) => {
-                          console.log(err)
-                      })
-                  }).catch((err) => {
-                      console.log(err)
-                  })
-              }).catch((err) => {
-                  console.log(err)
+              connectedDevice?.services().then((services) => {
+                services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('20')).then((characteristic) => {})
               })
               return 3
             }
@@ -136,44 +145,40 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
           });
         }, 1000);
         return () => {
-          dataCharMonitor?.remove()
           clearInterval(interval)
         }
     }
-  }, [countdownInProgress]);
+  }, [countdownInProgress, connectedDevice]);
 
   useEffect(() => {
     if (loadingFeedback) {
-        Manager.devices([DEVICE_UUID]).then((devices) => {
-            devices[0].services().then((services) => {
-                services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then((characteristic) => {
-                    axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, exerciseData.current).then((response: any) => {
-                        const integerObtainedFromResponse = response.data.data.feedback
-                        if (wantsFeedback) {
-                            const feedback = FeedbackMappings.find(obj => obj.feedback == integerObtainedFromResponse);
-                            setFeedbackFromPrev(feedback)
-                        }
-                        setLoadingFeedback(false)
-                        loadCurrentExerciseAndSessionData()
-                    }).catch((error: any) => {
-                        setLoadingFeedback(false)
-                        loadCurrentExerciseAndSessionData()
-                        setFeedbackError("Error generating feedback. ")
-                        console.log('Error creating exercise set: ')
-                        console.log(error)
-                    })
-                }).catch((err) => {
-                  console.log(err)
-                })
-            }).catch((err) => {
-                console.log(err)
-            })
-        }).catch((err) => {
-            console.log(err)
+      connectedDevice?.services().then((services) => {
+        services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then((characteristic) => {
+          axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, exerciseData.current).then((response: any) => {
+            const integerObtainedFromResponse = response.data.data.feedback
+            if (wantsFeedback) {
+                let feedback = FeedbackMappings.find(obj => obj.feedback == integerObtainedFromResponse);
+                if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "Sit to Stand" && feedback.feedback > 6) {
+                  feedback = FeedbackMappings.find(obj => obj.feedback == 1);
+                }
+                if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "One Legged Stair Climb" && feedback.feedback < 6) {
+                  feedback = FeedbackMappings.find(obj => obj.feedback == 6);
+                }
+                setFeedbackFromPrev(feedback)
+            }
+            setLoadingFeedback(false)
+            loadCurrentExerciseAndSessionData()
+        }).catch((error: any) => {
+            setLoadingFeedback(false)
+            loadCurrentExerciseAndSessionData()
+            setFeedbackError("Error generating feedback. ")
+            console.log('Error creating exercise set: ')
+            console.log(error)
         })
-
+        })
+      })
     }
-  }, [loadingFeedback]);
+  }, [loadingFeedback, connectedDevice]);
 
   const loadCurrentExerciseAndSessionData = () => {
     if (!exerciseSetsComplete) {
@@ -217,15 +222,9 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
   const cancelSet = () => {
     setSetInProgress(false)
     setCountdownInProgress(false)
-      Manager.devices([DEVICE_UUID]).then((devices) => {
-          devices[0].services().then((services) => {
-              services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('00')).then((characteristic) => {})
-          }).catch((err) => {
-              console.log(err)
-          })
-      }).catch((err) => {
-          console.log(err)
-      })
+    connectedDevice?.services().then((services) => {
+      services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('00')).then((characteristic) => {})
+    })
   }
 
   const submitSession = () => {
@@ -438,12 +437,12 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
               <Button 
               style={GlobalStyles.button}  
               mode="contained"
-              disabled={countdownInProgress || !isDeviceConnected}
+              disabled={countdownInProgress || !connectedDevice}
               buttonColor={Colors.primary}
               onPress={calibrate}
               >
               <Text style={styles.startExerciseButtonText}>
-                  {isDeviceConnected ? "Start Calibrating" : "Device disconnected"}
+                  {connectedDevice ? "Start Calibrating" : "Device disconnected"}
               </Text>
             </Button> 
             }
@@ -451,12 +450,12 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
               <Button 
               style={GlobalStyles.button}  
               mode="contained"
-              disabled={countdownInProgress || calibrating || !isDeviceConnected}
+              disabled={countdownInProgress || calibrating || !connectedDevice}
               buttonColor={Colors.primary}
               onPress={startSet}
               >
               <Text style={styles.startExerciseButtonText}>
-                  {isDeviceConnected ? "Start Set" : "Device disconnected"}
+                  {connectedDevice ? "Start Set" : "Device disconnected"}
               </Text>
             </Button> 
             }

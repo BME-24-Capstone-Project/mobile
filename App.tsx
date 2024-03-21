@@ -64,10 +64,9 @@ function App(): JSX.Element {
               console.log("Device Disconnected")
               setConnectedDevice(null)
             })
-              Manager.discoverAllServicesAndCharacteristicsForDevice(device.id).then((device) => {}).catch((err) => {
-                  console.log(err)
-              })
-
+            Manager.discoverAllServicesAndCharacteristicsForDevice(device.id).then((device) => {}).catch((err) => {
+              console.log(err)
+            })
             setConnectedDevice(device)
           }).catch(error => {
             console.log("Error connecting to device: ")
@@ -114,7 +113,7 @@ function App(): JSX.Element {
             />
             <Stack.Screen
               name="ExerciseInProgressScreen"
-                children={(props) => <ExerciseInProgressScreen {...props} isDeviceConnected={!!connectedDevice}/>}
+                children={(props) => <ExerciseInProgressScreen {...props} connectedDevice={connectedDevice}/>}
               options={{
                 headerTitle: "Current Set",
                 headerBackTitle: "Back",

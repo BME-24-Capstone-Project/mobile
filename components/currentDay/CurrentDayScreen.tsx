@@ -185,9 +185,6 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
           )}
         </View>
       </View>
-      {selectedExercise && (
-        <HelpModal assignedExercise={selectedExercise}/>
-      )}
       <Portal>
         <Dialog visible={dialogVisible} style={{backgroundColor: Colors.secondary}} onDismiss={hideDialog}>
           <Dialog.Title>Are you sure?</Dialog.Title>
