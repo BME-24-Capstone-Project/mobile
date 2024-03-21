@@ -105,8 +105,8 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
       <View style={styles.exerciseListItem} key={exercise.exercise.name}>
         <View style={styles.exerciseListItemDetailsContainer}>
           <Text style={GlobalStyles.appHeadingText}>{exercise.exercise.name}</Text>
-          {(exercise.num_sets && exercise.num_sets > 1) && <Text style={GlobalStyles.appParagraphText}>Sets: {exercise.num_sets}</Text>}
-          {(exercise.num_reps && exercise.num_reps > 1) && <Text style={GlobalStyles.appParagraphText}>Repetitions: {exercise.num_reps}</Text>}
+          {(exercise.num_sets && exercise.num_sets > 0) && <Text style={GlobalStyles.appParagraphText}>Sets: {exercise.num_sets}</Text>}
+          {(exercise.num_reps && exercise.num_reps > 0) && <Text style={GlobalStyles.appParagraphText}>Repetitions: {exercise.num_reps}</Text>}
           {exercise.distance && <Text style={GlobalStyles.appParagraphText}>Distance: {exercise.distance}m</Text>}
           <View style={styles.youtubePlayerContainer}>
             {exercise.exercise.video_id && (

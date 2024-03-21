@@ -15,7 +15,7 @@ import { ExerciseInProgressScreen } from "./components/exerciseInProgressScreen/
 import { GlobalStyles, Colors } from "./common/data-types/styles";
 import { BluetoothTest } from "./components/BluetoothTest";
 import { BluetoothConnectionIndicator } from "./components/BluetoothConnectionIndicator";
-import { Device } from "react-native-ble-plx";
+import { Device, Subscription } from "react-native-ble-plx";
 import { Manager } from "./common/common";
 import base64 from "base-64";
 
@@ -35,18 +35,22 @@ function App(): JSX.Element {
   const [connectedDevice, setConnectedDevice] = useState<Device | null>(null)
 
     useEffect(() => {
+      let disconnectMonitor: Subscription | null = null;
         if (!connectedDevice) {
-            scanAndConnect()
+          disconnectMonitor = scanAndConnect()
         }
+        return () => disconnectMonitor?.remove()
+        
     }, [connectedDevice])
 
-    const scanAndConnect = () => {
+    const scanAndConnect = () => { 
+      let disconnectMonitor: Subscription | null = null;
       console.log("Scan Started")
       Manager.startDeviceScan(null, null, (error, device) => {
         if (error) {
           console.log('Error while scanning devices');
           console.log(error);
-          scanAndConnect()
+          return scanAndConnect()
         }
         if (device?.name !== null) {
           console.log(device?.name)
@@ -56,7 +60,7 @@ function App(): JSX.Element {
           device.connect().then(device => {
             console.log("Connected to: " + device.name)
             console.log(device.id)
-            device.onDisconnected((error, device) => {
+            disconnectMonitor = device.onDisconnected((error, device) => {
               console.log("Device Disconnected")
               setConnectedDevice(null)
             })
@@ -73,6 +77,7 @@ function App(): JSX.Element {
           Manager.stopDeviceScan()
         }
       });
+      return disconnectMonitor
     }
 
 

@@ -10,7 +10,7 @@ import { FeedbackMappings, Feedback } from "../../common/feedback";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import base64 from 'base-64';
-import { Characteristic } from "react-native-ble-plx";
+import { Characteristic, Subscription } from "react-native-ble-plx";
 import * as child_process from "child_process";
 import YoutubeIframe from "react-native-youtube-iframe";
 
@@ -31,6 +31,7 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
   const [painRating, setPainRating] = useState<number>(3)
   const [submittedPainRating, setSubmittedPainRating] = useState<number>()
   const [note, setNote] = useState<string>("")
+  const [feedbackError, setFeedbackError] = useState<string>("")
   const [wantsFeedback, setWantsFeedback] = useState<boolean>(route.params.wants_feedback)
   const [startSetText, setStartSetText] = useState<string>(`Press "Start Set" to get started!`)
   const [playing, setPlaying] = useState(false);
@@ -50,11 +51,12 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
   }, [])
 
   useEffect(() => {
+    let controlCharMonitor: Subscription | null = null;
     if (calibrating) {
         Manager.devices([DEVICE_UUID]).then((devices) => {
             devices[0].services().then((services) => {
                 services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('10')).then((characteristic) => {
-                    characteristic.monitor((error, characteristic) => {
+                    controlCharMonitor = characteristic.monitor((error, characteristic) => {
                         if(error) {
                             console.log(error)
                         } else {
@@ -73,9 +75,14 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
             console.log(err)
         })
     }
+
+    return () => {
+      controlCharMonitor?.remove()
+    }
   }, [calibrating]);
 
   useEffect(() => {
+    let dataCharMonitor: Subscription | null = null;
     if (countdownInProgress) {
         const interval = setInterval(() => {
           setCountdownValue((prevCount) => {
@@ -85,11 +92,14 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
               Manager.devices([DEVICE_UUID]).then((devices) => {
                   devices[0].onDisconnected((error, device) => {
                       cancelSet()
+                      setLoadingFeedback(false)
+                      setFeedbackError("Error generating feedback. ")
+                      setCalibrating(false)
                       setStartSetText("Device disconnected. Please try again.")
                   })
                   devices[0].services().then((services) => {
                       services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('20')).then((characteristic) => {
-                          services[0].monitorCharacteristic(DATA_CHARACTERISTIC_UUID, (err, characteristic) => {
+                        dataCharMonitor = services[0].monitorCharacteristic(DATA_CHARACTERISTIC_UUID, (err, characteristic) => {
                               if(err) {
                                   console.log(err)
                               } else {
@@ -125,31 +135,35 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
             return prevCount - 1;
           });
         }, 1000);
-        return () => clearInterval(interval)
+        return () => {
+          dataCharMonitor?.remove()
+          clearInterval(interval)
+        }
     }
   }, [countdownInProgress]);
 
   useEffect(() => {
-    //add bluetooth calibrate code
     if (loadingFeedback) {
         Manager.devices([DEVICE_UUID]).then((devices) => {
             devices[0].services().then((services) => {
                 services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then((characteristic) => {
-                  console.log('here')
                     axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, exerciseData.current).then((response: any) => {
-                        //replace below with integerObtainedFromResponse(response.data.data)
-                        console.log(response.data.data)
-                        const integerObtainedFromResponse = 3
+                        const integerObtainedFromResponse = response.data.data.feedback
                         if (wantsFeedback) {
-                            const feedback = FeedbackMappings.find(obj => obj.feedback === integerObtainedFromResponse);
+                            const feedback = FeedbackMappings.find(obj => obj.feedback == integerObtainedFromResponse);
                             setFeedbackFromPrev(feedback)
                         }
                         setLoadingFeedback(false)
                         loadCurrentExerciseAndSessionData()
                     }).catch((error: any) => {
+                        setLoadingFeedback(false)
+                        loadCurrentExerciseAndSessionData()
+                        setFeedbackError("Error generating feedback. ")
                         console.log('Error creating exercise set: ')
                         console.log(error)
                     })
+                }).catch((err) => {
+                  console.log(err)
                 })
             }).catch((err) => {
                 console.log(err)
@@ -188,11 +202,11 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
   }
 
   const startSet = () => {
+    setFeedbackError("")
     setFeedbackFromPrev(undefined)
     setCountdownInProgress(true)
     setSetInProgress(true)
-      setStartSetText(`Press "Start Set" to get started!`)
-    // tell bluetooth to read data
+    setStartSetText(`Press "Start Set" to get started!`)
   }
 
   const submitSet = () => {
@@ -234,12 +248,6 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
   }
 
   const contentContainer = () => {
-    if (
-      feedbackFromPrev
-    ) {
-      console.log(feedbackFromPrev.video_id)
-      console.log(feedbackFromPrev.feedback)
-    }
     if (countdownInProgress) {
       return (<Text style={{...GlobalStyles.appHeadingText, fontSize: 100}}>{countdownValue}</Text>)
     } else if (feedbackFromPrev && !needsCalibration && !calibrating && !exerciseSetsComplete) {
@@ -285,7 +293,7 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
           <Text style={GlobalStyles.appHeadingText}>Loading Feedback</Text>
         </View>
       )
-    } else if (exerciseSetsComplete && !submittedPainRating) {
+    } else if (exerciseSetsComplete && !submittedPainRating && !feedbackFromPrev) {
       return (
         <View style={{alignItems: "center", gap: 50}}>
           <Text style={GlobalStyles.appHeadingText}>How was your pain during today's session?</Text>
@@ -300,6 +308,24 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
             reviewColor={Colors.primary}
           />
         </View>
+      )
+    } else if (exerciseSetsComplete && !submittedPainRating && feedbackFromPrev) {
+      return (
+        <View style={{alignContent: 'center', justifyContent:'center', alignItems:'center', gap: 15}}>
+        {(feedbackFromPrev.feedback === 1 || feedbackFromPrev.feedback === 6) && 
+          <FontAwesomeIcon icon={faCheck} size={100} color="green"/>
+        }
+        <Text style={GlobalStyles.appHeadingText}>{feedbackFromPrev.error_mode}</Text>
+        {(feedbackFromPrev.feedback !== 1 && feedbackFromPrev.feedback !==6) && 
+          <YoutubeIframe
+            height={200}
+            width={300}
+            play={playing}
+            videoId={feedbackFromPrev.video_id}
+          />
+        }
+        <Text style={{...GlobalStyles.appLargeParagraphText, textAlign: 'center'}}>{feedbackFromPrev.instructions}</Text>
+      </View>
       )
     } else if (exerciseSetsComplete && submittedPainRating) {
       return (
@@ -333,7 +359,7 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
       return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Please get in position and press "Start Calibrating". While calibrating, please sit still.</Text>
     } 
      else {
-      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>{startSetText}</Text>
+      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>{feedbackError}{startSetText}</Text>
     }
   }
 
@@ -434,7 +460,7 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
               </Text>
             </Button> 
             }
-            {(exerciseSetsComplete && !submittedPainRating) &&
+            {(exerciseSetsComplete && !submittedPainRating && !feedbackFromPrev) &&
               <Button 
                 style={GlobalStyles.button}  
                 mode="contained"
@@ -444,6 +470,19 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
               >
                 <Text style={styles.startExerciseButtonText}>
                   Submit Pain Rating
+                </Text>
+              </Button> 
+            }
+            {(exerciseSetsComplete && !submittedPainRating && feedbackFromPrev) &&
+              <Button 
+                style={GlobalStyles.button}  
+                mode="contained"
+                disabled={countdownInProgress || calibrating}
+                buttonColor={Colors.primary}
+                onPress={() => setFeedbackFromPrev(undefined)}
+              >
+                <Text style={styles.startExerciseButtonText}>
+                  Finish Exercises
                 </Text>
               </Button> 
             }
