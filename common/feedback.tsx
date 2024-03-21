@@ -10,87 +10,54 @@ export const FeedbackMappings: Feedback[] = [
         feedback: 1,
         error_mode: "Great form!",
         instructions: "Keep up the good work.",
-        video_id: "none"
+        video_id: ""
     },
     {
         feedback: 2,
-        error_mode: "Weight bearing asymmetry during sit-to-standb",
-        instructions: "Keep your leg a little closer to your body while flexing your knee more during each sit-to-stand!",
-        video_id: "none"
+        error_mode: "Weight Bearing Asymmetry",
+        instructions: "Bring your leg closer to your body, so that both legs are in the same position.",
+        video_id: "ZSg09YXn8fc"
     },
     {
         feedback: 3,
-        error_mode: "Increased trunk flexion during sit-to-stand",
-        instructions: "Keep your trunk straight and try flexing your knee more during each sit-to-stand!",
-        video_id: "none"
+        error_mode: "Increased Trunk Flexion",
+        instructions: "Lean forward less as you stand up, and focus on using your muscles in your legs.",
+        video_id: "Ct77FaYzoiA"
     },
     {
         feedback: 4,
-        error_mode: "Increased medial acceleration of the knee during sit-to-stand",
-        instructions: "Keep both knees from coming into contact with each other by pushing your knee out a little more while performing each sit-to-stand!",
-        video_id: "none"
+        error_mode: "Medial Tilt",
+        instructions: "Focus on keeping your knees apart as you stand up and sit down.",
+        video_id: "RaseRDOEaUA"
     },
     {
         feedback: 5,
-        error_mode: "Increased lateral acceleration of the knee during sit-to-stand",
-        instructions: "Keep your knee from bending outward by pushing your knee in a little more while performing each sit-to-stand!",
-        video_id: "none"
+        error_mode: "Lateral Tilt",
+        instructions: "Focus on not letting your knees stray too far apart as you stand up and sit down.",
+        video_id: "S-9b-7vCgxc"
     },
     {
         feedback: 6,
         error_mode: "Great form!",
         instructions: "Keep up the good work.",
-        video_id: "none"
+        video_id: ""
     },
     {
         feedback: 7,
-        error_mode: "Reduction in knee flexion during one-legged stair climb",
-        instructions: "Flex your knee more while reducing how much your trunk leans into each stair climb!",
-        video_id: "none"
+        error_mode: "Weight bearing asymmetry",
+        instructions: "Focus on learning forward less during your step up, and place more weight on your injured leg.",
+        video_id: "V_7n9epP6ZM"
     },
     {
         feedback: 8,
-        error_mode: "Increase in medial acceleration of the leg during one-legged stair climb",
-        instructions: "Move your leg a little more laterally during each stair climb!",
-        video_id: "none"
+        error_mode: "Medial Tilt",
+        instructions: "Focus on stepping up evenly and distribute your weight onto both legs.",
+        video_id: "ARESF6L6Qrg"
     },
     {
         feedback: 9,
-        error_mode: "Increased sway during one-legged stair climb",
-        instructions: "Flex your hip and knee more to move your leg, and decrease how much your trunk leans into each stair climb!",
-        video_id: "none"
+        error_mode: "Hip sway",
+        instructions: "Focus on applying weight onto your injured leg, and swing your hips less as you step up.",
+        video_id: "wVFzSP0cGH8"
     },
 ]
-
-
-// Sit-to-Stand:
-// Mode 1: 20 sets, 10 reps normal = 200 reps total
-
-// Mode 2: modeOfError: “Weight bearing asymmetry during sit-to-stand”
-// Instruction: “Keep your leg a little closer to your body while flexing your knee more during each sit-to-stand!”
-
-// Mode 3: modeOfError: “Increased trunk flexion during sit-to-stand”
-// Instruction: “Keep your trunk straight and try flexing your knee more during each sit-to-stand!”
-
-// Mode 4: modeOfError: “Increased medial acceleration of the knee during sit-to-stand”
-// Instruction: “Keep both knees from coming into contact with each other by pushing your knee out a little more while performing each sit-to-stand!”
-
-// Mode 5: modeOfError: “Increased lateral acceleration of the knee during sit-to-stand”
-// Instruction: “Keep your knee from bending outward by pushing your knee in a little more while performing each sit-to-stand!”
-
-
-// Stair Climb:
-// Right up Right down
-// Mode 6: 15 sets, 10 reps normal = 150 reps total
-
-// Left up Left down
-// Mode 7: modeOfError: “Reduction in knee flexion during one-legged stair climb”
-// Instruction: “Flex your knee more while reducing how much your trunk leans into each stair climb!”
-
-// Right up Right down
-// Mode 8: modeOfError: “Increase in medial acceleration of the leg during one-legged stair climb”
-// Instruction: “Move your leg a little more laterally during each stair climb!”
-
-// Left up Left down
-// Mode 9: modeOfError: “Increased sway during one-legged stair climb”
-// Instruction: “Flex your hip and knee more to move your leg, and decrease how much your trunk leans into each stair climb!”
