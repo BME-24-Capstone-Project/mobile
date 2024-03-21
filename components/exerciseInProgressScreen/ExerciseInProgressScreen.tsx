@@ -108,20 +108,21 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
                                   console.log(err)
                               } else {
                                   if(characteristic?.value) {
+                                      console.log("Batch Received")
                                       const payload = JSON.parse(base64.decode(characteristic.value))
-                                      exerciseData.current.acc_x[0] = [...exerciseData.current.acc_x[0], payload['acc_x_1']] as never
-                                      exerciseData.current.acc_x[1] = [...exerciseData.current.acc_x[1], payload['acc_x_2']] as never
-                                      exerciseData.current.acc_y[0] = [...exerciseData.current.acc_y[0], payload['acc_y_1']] as never
-                                      exerciseData.current.acc_y[1] = [...exerciseData.current.acc_y[1], payload['acc_y_2']] as never
-                                      exerciseData.current.acc_z[0] = [...exerciseData.current.acc_z[0], payload['acc_z_1']] as never
-                                      exerciseData.current.acc_z[1] = [...exerciseData.current.acc_z[1], payload['acc_z_2']] as never
-                                      exerciseData.current.roll[0] = [...exerciseData.current.roll[0], payload['roll_1']] as never
-                                      exerciseData.current.roll[1] = [...exerciseData.current.roll[1], payload['roll_2']] as never
-                                      exerciseData.current.yaw[0] = [...exerciseData.current.yaw[0], payload['yaw_1']] as never
-                                      exerciseData.current.yaw[1] = [...exerciseData.current.yaw[1], payload['yaw_2']] as never
-                                      exerciseData.current.pitch[0] = [...exerciseData.current.pitch[0], payload['pitch_1']] as never
-                                      exerciseData.current.pitch[1] = [...exerciseData.current.pitch[1], payload['pitch_2']] as never
-                                      exerciseData.current.angle = [...exerciseData.current.angle, payload['angle']] as never
+                                      exerciseData.current.acc_x[0] = [...exerciseData.current.acc_x[0], ...payload['acc_x_1']] as never
+                                      exerciseData.current.acc_x[1] = [...exerciseData.current.acc_x[1], ...payload['acc_x_2']] as never
+                                      exerciseData.current.acc_y[0] = [...exerciseData.current.acc_y[0], ...payload['acc_y_1']] as never
+                                      exerciseData.current.acc_y[1] = [...exerciseData.current.acc_y[1], ...payload['acc_y_2']] as never
+                                      exerciseData.current.acc_z[0] = [...exerciseData.current.acc_z[0], ...payload['acc_z_1']] as never
+                                      exerciseData.current.acc_z[1] = [...exerciseData.current.acc_z[1], ...payload['acc_z_2']] as never
+                                      exerciseData.current.roll[0] = [...exerciseData.current.roll[0], ...payload['roll_1']] as never
+                                      exerciseData.current.roll[1] = [...exerciseData.current.roll[1], ...payload['roll_2']] as never
+                                      exerciseData.current.yaw[0] = [...exerciseData.current.yaw[0], ...payload['yaw_1']] as never
+                                      exerciseData.current.yaw[1] = [...exerciseData.current.yaw[1], ...payload['yaw_2']] as never
+                                      exerciseData.current.pitch[0] = [...exerciseData.current.pitch[0], ...payload['pitch_1']] as never
+                                      exerciseData.current.pitch[1] = [...exerciseData.current.pitch[1], ...payload['pitch_2']] as never
+                                      exerciseData.current.angle = [...exerciseData.current.angle, ...payload['angle']] as never
                                   }
                               }
                           })
