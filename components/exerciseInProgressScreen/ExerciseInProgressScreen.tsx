@@ -58,6 +58,7 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
                 services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('10')).then((characteristic) => {
                     controlCharMonitor = characteristic.monitor((error, characteristic) => {
                         if(error) {
+                            console.log("1")
                             console.log(error)
                         } else {
                             if(characteristic?.value && base64.decode(characteristic.value) === "11") {
@@ -67,12 +68,15 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
                     })
                 }).catch((err) => {
                     console.log(err)
+                    console.log("2")
                 })
             }).catch((err) => {
                 console.log(err)
+                console.log("3")
             })
         }).catch((err) => {
             console.log(err)
+            console.log("4")
         })
     }
 
@@ -212,6 +216,15 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
   const submitSet = () => {
     setSetInProgress(false)
     setLoadingFeedback(true)
+    exerciseData.current = {
+      'acc_x': [[], []],
+      'acc_y': [[], []],
+      'acc_z': [[], []],
+      'roll': [[], []],
+      'pitch': [[], []],
+      'yaw': [[], []],
+      'angle': []
+    }
   }
 
   const cancelSet = () => {
@@ -226,6 +239,15 @@ export const ExerciseInProgressScreen = ({navigation, route, isDeviceConnected}:
       }).catch((err) => {
           console.log(err)
       })
+    exerciseData.current = {
+      'acc_x': [[], []],
+      'acc_y': [[], []],
+      'acc_z': [[], []],
+      'roll': [[], []],
+      'pitch': [[], []],
+      'yaw': [[], []],
+      'angle': []
+    }
   }
 
   const submitSession = () => {
