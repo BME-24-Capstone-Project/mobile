@@ -217,11 +217,29 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
   const submitSet = () => {
     setSetInProgress(false)
     setLoadingFeedback(true)
+    exerciseData.current = {
+      'acc_x': [[], []],
+      'acc_y': [[], []],
+      'acc_z': [[], []],
+      'roll': [[], []],
+      'pitch': [[], []],
+      'yaw': [[], []],
+      'angle': []
+    }
   }
 
   const cancelSet = () => {
     setSetInProgress(false)
     setCountdownInProgress(false)
+    exerciseData.current = {
+      'acc_x': [[], []],
+      'acc_y': [[], []],
+      'acc_z': [[], []],
+      'roll': [[], []],
+      'pitch': [[], []],
+      'yaw': [[], []],
+      'angle': []
+    }
     connectedDevice?.services().then((services) => {
       services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('00')).then((characteristic) => {})
     })
