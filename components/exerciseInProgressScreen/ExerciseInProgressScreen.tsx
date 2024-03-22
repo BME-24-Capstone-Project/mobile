@@ -35,8 +35,7 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
   const [wantsFeedback, setWantsFeedback] = useState<boolean>(route.params.wants_feedback)
   const [startSetText, setStartSetText] = useState<string>(`Press "Start Set" to get started!`)
   const [playing, setPlaying] = useState(false);
-
-  let exerciseData = useRef({
+  const [exerciseData, setExerciseData] = useState({
     'acc_x': [[], []],
     'acc_y': [[], []],
     'acc_z': [[], []],
@@ -56,44 +55,52 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
     })
   }
 
+  useEffect(() => {
+    console.log(exerciseData)
+  }, [exerciseData] )
+
   const setupBleMonitors = () => {
     let characteristicMonitors: Subscription[] = []
     connectedDevice?.services().then((services) => {
       services[0].characteristics().then((characteristics) => {
-        characteristics.map((characteristic) => {
-          characteristicMonitors.push(characteristic.monitor((error, characteristic) => {
-            if(characteristic?.uuid === CONTROL_CHARACTERISTIC_UUID) {
-              if(error) {
-                console.log(error)
-              } else {
-                if(characteristic?.value && base64.decode(characteristic.value) === "11") {
-                    setCalibrating(false)
+        if (characteristics) {
+          characteristics.map((characteristic) => {
+            characteristicMonitors.push(characteristic.monitor((error, characteristic) => {
+              if(characteristic?.uuid === CONTROL_CHARACTERISTIC_UUID) {
+                if(error) {
+                  console.log(error)
+                } else {
+                  if(characteristic?.value && base64.decode(characteristic.value) === "11") {
+                      setCalibrating(false)
+                  }
                 }
-              }
-            } else {
-              if(error) {
-                console.log(error)
               } else {
-                if(characteristic?.value) {
+                if(error) {
+                  console.log(error)
+                } else {
+                  if(characteristic?.value) {
+                    console.log("Batch Received")
                     const payload = JSON.parse(base64.decode(characteristic.value))
-                    exerciseData.current.acc_x[0] = [...exerciseData.current.acc_x[0], payload['acc_x_1']] as never
-                    exerciseData.current.acc_x[1] = [...exerciseData.current.acc_x[1], payload['acc_x_2']] as never
-                    exerciseData.current.acc_y[0] = [...exerciseData.current.acc_y[0], payload['acc_y_1']] as never
-                    exerciseData.current.acc_y[1] = [...exerciseData.current.acc_y[1], payload['acc_y_2']] as never
-                    exerciseData.current.acc_z[0] = [...exerciseData.current.acc_z[0], payload['acc_z_1']] as never
-                    exerciseData.current.acc_z[1] = [...exerciseData.current.acc_z[1], payload['acc_z_2']] as never
-                    exerciseData.current.roll[0] = [...exerciseData.current.roll[0], payload['roll_1']] as never
-                    exerciseData.current.roll[1] = [...exerciseData.current.roll[1], payload['roll_2']] as never
-                    exerciseData.current.yaw[0] = [...exerciseData.current.yaw[0], payload['yaw_1']] as never
-                    exerciseData.current.yaw[1] = [...exerciseData.current.yaw[1], payload['yaw_2']] as never
-                    exerciseData.current.pitch[0] = [...exerciseData.current.pitch[0], payload['pitch_1']] as never
-                    exerciseData.current.pitch[1] = [...exerciseData.current.pitch[1], payload['pitch_2']] as never
-                    exerciseData.current.angle = [...exerciseData.current.angle, payload['angle']] as never
+                    console.log(exerciseData)
+                    
+                    setExerciseData(prev => {return {
+                        acc_x: [[...prev.acc_x[0], ...payload['acc_x_1']], [...prev.acc_x[1], ...payload['acc_x_2']]] as never,
+                        acc_y: [[...prev.acc_y[0], ...payload['acc_y_1']], [...prev.acc_y[1], ...payload['acc_y_2']]] as never,
+                        acc_z: [[...prev.acc_z[0], ...payload['acc_z_1']], [...prev.acc_z[1], ...payload['acc_z_2']]] as never,
+                        roll: [[...prev.roll[0], ...payload['roll_1']], [...prev.roll[1], ...payload['roll_2']]] as never,
+                        yaw: [[...prev.yaw[0], ...payload['yaw_1']], [...prev.yaw[1], ...payload['yaw_2']]] as never,
+                        pitch: [[...prev.pitch[0], ...payload['pitch_1']], [...prev.pitch[1], ...payload['pitch_2']]] as never,
+                        angle: [...prev.angle, ...payload['angle']] as never,
+                        
+                    }}
+                    )
+                  }
                 }
               }
-            }
-          }))
-        })
+            }))
+          })
+        }
+        
       })
     })
     return characteristicMonitors
@@ -112,9 +119,11 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
     }
 
     return () => {
-      characteristicMonitors.map((monitor) => {
-        monitor.remove()
-      })
+      if (characteristicMonitors) {
+        characteristicMonitors.map((monitor) => {
+          monitor.remove()
+        })
+      }
       disconnectMonitor?.remove()
     }
   }, [connectedDevice])
@@ -154,26 +163,68 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
     if (loadingFeedback) {
       connectedDevice?.services().then((services) => {
         services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then((characteristic) => {
-          axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, exerciseData.current).then((response: any) => {
+          console.log('Final Data')
+          console.log(exerciseData)
+          let tempExerciseData = exerciseData
+          const keys = ["acc_x", "acc_y", "acc_z", "roll", "pitch", "yaw", "angle"]
+          let maxSize = 0
+          keys.forEach((key) => {
+            tempExerciseData[key as never].forEach((arr) => {
+              if(arr.length > maxSize) {
+                maxSize = arr.length
+              }
+            })
+          })
+          console.log(maxSize)
+          keys.forEach((key) => {
+            tempExerciseData[key as never].forEach((arr) => {
+              if(arr.length < maxSize) {
+                for(let i = 0; i < maxSize - arr.length; i++) {
+                  arr.push(0)
+                }
+              }
+            })
+          })
+          axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, tempExerciseData).then((response: any) => {
             const integerObtainedFromResponse = response.data.data.feedback
             if (wantsFeedback) {
                 let feedback = FeedbackMappings.find(obj => obj.feedback == integerObtainedFromResponse);
-                if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "Sit to Stand" && feedback.feedback > 6) {
-                  feedback = FeedbackMappings.find(obj => obj.feedback == 1);
-                }
-                if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "One Legged Stair Climb" && feedback.feedback < 6) {
-                  feedback = FeedbackMappings.find(obj => obj.feedback == 6);
-                }
+                // if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "Sit to Stand" && feedback.feedback > 6) {
+                //   feedback = FeedbackMappings.find(obj => obj.feedback == 1);
+                // }
+                // if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "One Legged Stair Climb" && feedback.feedback < 6) {
+                //   feedback = FeedbackMappings.find(obj => obj.feedback == 6);
+                // }
                 setFeedbackFromPrev(feedback)
             }
             setLoadingFeedback(false)
             loadCurrentExerciseAndSessionData()
+            console.log("Reset")
+            setExerciseData({
+              'acc_x': [[], []],
+              'acc_y': [[], []],
+              'acc_z': [[], []],
+              'roll': [[], []],
+              'pitch': [[], []],
+              'yaw': [[], []],
+              'angle': []
+            })
         }).catch((error: any) => {
             setLoadingFeedback(false)
             loadCurrentExerciseAndSessionData()
             setFeedbackError("Error generating feedback. ")
             console.log('Error creating exercise set: ')
             console.log(error)
+            console.log("Reset")
+            // setExerciseData({
+            //   'acc_x': [[], []],
+            //   'acc_y': [[], []],
+            //   'acc_z': [[], []],
+            //   'roll': [[], []],
+            //   'pitch': [[], []],
+            //   'yaw': [[], []],
+            //   'angle': []
+            // })
         })
         })
       })
@@ -217,29 +268,29 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
   const submitSet = () => {
     setSetInProgress(false)
     setLoadingFeedback(true)
-    exerciseData.current = {
-      'acc_x': [[], []],
-      'acc_y': [[], []],
-      'acc_z': [[], []],
-      'roll': [[], []],
-      'pitch': [[], []],
-      'yaw': [[], []],
-      'angle': []
-    }
+    // setExerciseData({
+    //   'acc_x': [[], []],
+    //   'acc_y': [[], []],
+    //   'acc_z': [[], []],
+    //   'roll': [[], []],
+    //   'pitch': [[], []],
+    //   'yaw': [[], []],
+    //   'angle': []
+    // })
   }
 
   const cancelSet = () => {
     setSetInProgress(false)
     setCountdownInProgress(false)
-    exerciseData.current = {
-      'acc_x': [[], []],
-      'acc_y': [[], []],
-      'acc_z': [[], []],
-      'roll': [[], []],
-      'pitch': [[], []],
-      'yaw': [[], []],
-      'angle': []
-    }
+    // setExerciseData({
+    //   'acc_x': [[], []],
+    //   'acc_y': [[], []],
+    //   'acc_z': [[], []],
+    //   'roll': [[], []],
+    //   'pitch': [[], []],
+    //   'yaw': [[], []],
+    //   'angle': []
+    // })
     connectedDevice?.services().then((services) => {
       services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('00')).then((characteristic) => {})
     })
