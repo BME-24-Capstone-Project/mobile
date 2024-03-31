@@ -4,27 +4,25 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, ProgressBar, TextInput} from "react-native-paper";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
 import LottieView from "lottie-react-native";
-import { BleManager } from "react-native-ble-plx";
 import { AirbnbRating } from "react-native-ratings";
-import { BaseURL } from "../../common/common";
+import { BaseURL, Manager, DEVICE_UUID, CONTROL_CHARACTERISTIC_UUID, DATA_CHARACTERISTIC_UUID } from "../../common/common";
+import { FeedbackMappings, Feedback } from "../../common/feedback";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import base64 from 'base-64';
+import { Characteristic, Device, Subscription } from "react-native-ble-plx";
+import * as child_process from "child_process";
+import YoutubeIframe from "react-native-youtube-iframe";
 
-// add "done calibrating screen"
-// add images of calibration poses
-// add session progress header
-// remove calibrating
+export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {navigation: any, route: any, connectedDevice: Device | null}) => {
 
-export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, route: any}) => {
-  const manager = new BleManager();
 
   const session_id = route.params.session_id
-  console.log("Params wants feedback")
-  console.log(route.params.wants_feedback)
   const [currentSetAndSessionData, setCurrentSetAndSessionData] = useState<CurrentSetAndSessionData>()
   const [setInProgress, setSetInProgress] = useState<boolean>(false)
   const [countdownInProgress, setCountdownInProgress] = useState<boolean>(false)
   const [countdownValue, setCountdownValue] = useState<number>(3)
   const [feedbackFromPrev, setFeedbackFromPrev] = useState<Feedback>()
-  const [connectedDevice, setConnectedDevice] = useState<any>()
   const [deviceData, setDeviceData] = useState<any>()
   const [loadingFeedback, setLoadingFeedback] = useState<boolean>(false)
   const [exerciseSetsComplete, setExerciseSetsComplete] = useState<boolean>(false)
@@ -33,13 +31,112 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   const [painRating, setPainRating] = useState<number>(3)
   const [submittedPainRating, setSubmittedPainRating] = useState<number>()
   const [note, setNote] = useState<string>("")
+  const [feedbackError, setFeedbackError] = useState<string>("")
   const [wantsFeedback, setWantsFeedback] = useState<boolean>(route.params.wants_feedback)
+  const [startSetText, setStartSetText] = useState<string>(`Press "Start Set" to get started!`)
+  const [playing, setPlaying] = useState(false);
+  const [exerciseData, setExerciseData] = useState({
+    'acc_x': [[], []],
+    'acc_y': [[], []],
+    'acc_z': [[], []],
+    'roll': [[], []],
+    'pitch': [[], []],
+    'yaw': [[], []],
+    'angle': []
+  })
 
-  // could show previous exercises feedback on next exercise page. 
+  const setupDeviceDisconnectMonitor = () => {
+    return connectedDevice?.onDisconnected((error, device) => {
+      cancelSet()
+      setLoadingFeedback(false)
+      setFeedbackError("Error generating feedback. ")
+      setCalibrating(false)
+      setStartSetText("Device disconnected. Please try again.")
+    })
+  }
+
+  useEffect(() => {
+    console.log(exerciseData)
+  }, [exerciseData] )
+
+  const setupBleMonitors = () => {
+    let characteristicMonitors: Subscription[] = []
+    connectedDevice?.services().then((services) => {
+      services[0].characteristics().then((characteristics) => {
+        if (characteristics) {
+          characteristics.map((characteristic) => {
+            characteristicMonitors.push(characteristic.monitor((error, characteristic) => {
+              if(characteristic?.uuid === CONTROL_CHARACTERISTIC_UUID) {
+                if(error) {
+                  console.log(error)
+                } else {
+                  if(characteristic?.value && base64.decode(characteristic.value) === "11") {
+                      setCalibrating(false)
+                  }
+                }
+              } else {
+                if(error) {
+                  console.log(error)
+                } else {
+                  if(characteristic?.value) {
+                    console.log("Batch Received")
+                    const payload = JSON.parse(base64.decode(characteristic.value))
+                    console.log(exerciseData)
+                    
+                    setExerciseData(prev => {return {
+                        acc_x: [[...prev.acc_x[0], ...payload['acc_x_1']], [...prev.acc_x[1], ...payload['acc_x_2']]] as never,
+                        acc_y: [[...prev.acc_y[0], ...payload['acc_y_1']], [...prev.acc_y[1], ...payload['acc_y_2']]] as never,
+                        acc_z: [[...prev.acc_z[0], ...payload['acc_z_1']], [...prev.acc_z[1], ...payload['acc_z_2']]] as never,
+                        roll: [[...prev.roll[0], ...payload['roll_1']], [...prev.roll[1], ...payload['roll_2']]] as never,
+                        yaw: [[...prev.yaw[0], ...payload['yaw_1']], [...prev.yaw[1], ...payload['yaw_2']]] as never,
+                        pitch: [[...prev.pitch[0], ...payload['pitch_1']], [...prev.pitch[1], ...payload['pitch_2']]] as never,
+                        angle: [...prev.angle, ...payload['angle']] as never,
+                        
+                    }}
+                    )
+                  }
+                }
+              }
+            }))
+          })
+        }
+        
+      })
+    })
+    return characteristicMonitors
+  }
+
   useEffect(() => {
     loadCurrentExerciseAndSessionData()
-    // scanAndConnect()
   }, [])
+
+  useEffect(() => {
+    let characteristicMonitors: Subscription[];
+    let disconnectMonitor: Subscription | undefined;
+    if(connectedDevice) {
+      disconnectMonitor = setupDeviceDisconnectMonitor()
+      characteristicMonitors = setupBleMonitors()
+    }
+
+    return () => {
+      if (characteristicMonitors) {
+        characteristicMonitors.map((monitor) => {
+          monitor.remove()
+        })
+      }
+      disconnectMonitor?.remove()
+    }
+  }, [connectedDevice])
+
+  useEffect(() => {
+    if (calibrating && connectedDevice) {
+        connectedDevice.services().then((services) => {
+          services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('10')).then((characteristic) => {})
+        }).catch((err) => {
+          console.log(err)
+        })
+    }
+  }, [calibrating, connectedDevice]);
 
   useEffect(() => {
     if (countdownInProgress) {
@@ -48,91 +145,91 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
             if (prevCount === 1) {
               () => clearInterval(interval);
               setCountdownInProgress(false);
+              connectedDevice?.services().then((services) => {
+                services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('20')).then((characteristic) => {})
+              })
               return 3
             }
             return prevCount - 1;
           });
         }, 1000);
-        return () => clearInterval(interval)
-    }
-  }, [countdownInProgress]);
-
-  useEffect(() => {
-    //add bluetooth calibrate code
-    if (calibrating) {
-      setTimeout(() => {
-        setCalibrating(false)
-      }, 1000)
-    }
-  }, [calibrating]);
-
-  useEffect(() => {
-    console.log("wants feedback")
-    console.log(wantsFeedback)
-    //add bluetooth calibrate code
-    if (loadingFeedback) {
-      axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, {
-        acc_x: [],
-        acc_y: [],
-        acc_z: [],
-        roll: [],
-        pitch: [],
-        yaw: [],
-        angle: [],
-      }).then((response: any) => {
-        //setFeedbackFromPrev(response.data.data)
-        console.log('here')
-        loadCurrentExerciseAndSessionData()
-      }).catch((error: any) => {
-        console.log('Error creating Session: ')
-        console.log(error)
-      })
-      
-      setTimeout(() => {
-        setLoadingFeedback(false)
-        if (wantsFeedback) {
-          setFeedbackFromPrev({
-            error_mode: "Error Mode.",
-            instructions: "Do this instead of that."
-          })
+        return () => {
+          clearInterval(interval)
         }
-      }, 1000)
     }
-  }, [loadingFeedback]);
+  }, [countdownInProgress, connectedDevice]);
 
-  // function scanAndConnect() {
-  //   axios.get(`${BaseURL}/device`).then((response: any) => {
-  //     console.log(response.data)
-  //     setDeviceData(response.data.data)
-  //     console.log("Scan Started")
-  //     manager.startDeviceScan(null, null, (error, device) => {
-  //     if (error) {
-  //       // Handle error (scanning will be stopped automatically)
-  //       console.log('Error while scanning devices');
-  //       console.log(error);
-  //       return;
-  //     }
-  //     if (device && (device.name === response.data.data.name || device.localName === response.data.data.name )) {
-  //       device.connect().then(device => {
-  //         console.log("Connected to: " + device.name)
-  //         setConnectedDevice(device)
-  //         device.discoverAllServicesAndCharacteristics()
-  //       }).catch(error => {
-  //         console.log("Error connecting to device: ")
-  //         console.log(error)
-  //         manager.stopDeviceScan()
-  //       })
-  //       manager.stopDeviceScan()
-  //     }
-  //     });
-  //   }).catch((error: any) => {
-  //     console.log("Error Getting device id")
-  //     console.log(error);
-  //   })
-    
-  // }
-
-  
+  useEffect(() => {
+    if (loadingFeedback) {
+      connectedDevice?.services().then((services) => {
+        services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then((characteristic) => {
+          console.log('Final Data')
+          console.log(exerciseData)
+          let tempExerciseData = exerciseData
+          const keys = ["acc_x", "acc_y", "acc_z", "roll", "pitch", "yaw", "angle"]
+          let maxSize = 0
+          keys.forEach((key) => {
+            tempExerciseData[key as never].forEach((arr) => {
+              if(arr.length > maxSize) {
+                maxSize = arr.length
+              }
+            })
+          })
+          console.log(maxSize)
+          keys.forEach((key) => {
+            tempExerciseData[key as never].forEach((arr) => {
+              if(arr.length < maxSize) {
+                for(let i = 0; i < maxSize - arr.length; i++) {
+                  arr.push(0)
+                }
+              }
+            })
+          })
+          axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, tempExerciseData).then((response: any) => {
+            const integerObtainedFromResponse = response.data.data.feedback
+            if (wantsFeedback) {
+                let feedback = FeedbackMappings.find(obj => obj.feedback == integerObtainedFromResponse);
+                // if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "Sit to Stand" && feedback.feedback > 6) {
+                //   feedback = FeedbackMappings.find(obj => obj.feedback == 1);
+                // }
+                // if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "One Legged Stair Climb" && feedback.feedback < 6) {
+                //   feedback = FeedbackMappings.find(obj => obj.feedback == 6);
+                // }
+                setFeedbackFromPrev(feedback)
+            }
+            setLoadingFeedback(false)
+            loadCurrentExerciseAndSessionData()
+            console.log("Reset")
+            setExerciseData({
+              'acc_x': [[], []],
+              'acc_y': [[], []],
+              'acc_z': [[], []],
+              'roll': [[], []],
+              'pitch': [[], []],
+              'yaw': [[], []],
+              'angle': []
+            })
+        }).catch((error: any) => {
+            setLoadingFeedback(false)
+            loadCurrentExerciseAndSessionData()
+            setFeedbackError("Error generating feedback. ")
+            console.log('Error creating exercise set: ')
+            console.log(error)
+            console.log("Reset")
+            // setExerciseData({
+            //   'acc_x': [[], []],
+            //   'acc_y': [[], []],
+            //   'acc_z': [[], []],
+            //   'roll': [[], []],
+            //   'pitch': [[], []],
+            //   'yaw': [[], []],
+            //   'angle': []
+            // })
+        })
+        })
+      })
+    }
+  }, [loadingFeedback, connectedDevice]);
 
   const loadCurrentExerciseAndSessionData = () => {
     if (!exerciseSetsComplete) {
@@ -143,7 +240,6 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
         } else if (!response.data.data) {
           console.log("No response data received, sets complete")
           setExerciseSetsComplete(true);
-
         }
       }).catch((error: any) => {
         console.log("Error Getting currentSetAndSessionData")
@@ -162,25 +258,42 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
   }
 
   const startSet = () => {
+    setFeedbackError("")
     setFeedbackFromPrev(undefined)
     setCountdownInProgress(true)
     setSetInProgress(true)
-    // tell bluetooth to read data
+    setStartSetText(`Press "Start Set" to get started!`)
   }
 
   const submitSet = () => {
     setSetInProgress(false)
     setLoadingFeedback(true)
-    
-    // pull data from bluetooth
-    // submit to DB
-    // submit feedback
-    // page should rerender automatically 
+    // setExerciseData({
+    //   'acc_x': [[], []],
+    //   'acc_y': [[], []],
+    //   'acc_z': [[], []],
+    //   'roll': [[], []],
+    //   'pitch': [[], []],
+    //   'yaw': [[], []],
+    //   'angle': []
+    // })
   }
 
   const cancelSet = () => {
     setSetInProgress(false)
     setCountdownInProgress(false)
+    // setExerciseData({
+    //   'acc_x': [[], []],
+    //   'acc_y': [[], []],
+    //   'acc_z': [[], []],
+    //   'roll': [[], []],
+    //   'pitch': [[], []],
+    //   'yaw': [[], []],
+    //   'angle': []
+    // })
+    connectedDevice?.services().then((services) => {
+      services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('00')).then((characteristic) => {})
+    })
   }
 
   const submitSession = () => {
@@ -207,10 +320,21 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
       return (<Text style={{...GlobalStyles.appHeadingText, fontSize: 100}}>{countdownValue}</Text>)
     } else if (feedbackFromPrev && !needsCalibration && !calibrating && !exerciseSetsComplete) {
       return (
-        <>
+        <View style={{alignContent: 'center', justifyContent:'center', alignItems:'center', gap: 15}}>
+          {(feedbackFromPrev.feedback === 1 || feedbackFromPrev.feedback === 6) && 
+            <FontAwesomeIcon icon={faCheck} size={100} color="green"/>
+          }
           <Text style={GlobalStyles.appHeadingText}>{feedbackFromPrev.error_mode}</Text>
-          <Text style={GlobalStyles.appLargeParagraphText}>Feedback shows here</Text>
-        </>
+          {(feedbackFromPrev.feedback !== 1 && feedbackFromPrev.feedback !==6) && 
+            <YoutubeIframe
+              height={200}
+              width={300}
+              play={playing}
+              videoId={feedbackFromPrev.video_id}
+            />
+          }
+          <Text style={GlobalStyles.appLargeParagraphText}>{feedbackFromPrev.instructions}</Text>
+        </View>
       )
       
     } else if (setInProgress) {
@@ -237,7 +361,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
           <Text style={GlobalStyles.appHeadingText}>Loading Feedback</Text>
         </View>
       )
-    } else if (exerciseSetsComplete && !submittedPainRating) {
+    } else if (exerciseSetsComplete && !submittedPainRating && !feedbackFromPrev) {
       return (
         <View style={{alignItems: "center", gap: 50}}>
           <Text style={GlobalStyles.appHeadingText}>How was your pain during today's session?</Text>
@@ -252,6 +376,24 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
             reviewColor={Colors.primary}
           />
         </View>
+      )
+    } else if (exerciseSetsComplete && !submittedPainRating && feedbackFromPrev) {
+      return (
+        <View style={{alignContent: 'center', justifyContent:'center', alignItems:'center', gap: 15}}>
+        {(feedbackFromPrev.feedback === 1 || feedbackFromPrev.feedback === 6) && 
+          <FontAwesomeIcon icon={faCheck} size={100} color="green"/>
+        }
+        <Text style={GlobalStyles.appHeadingText}>{feedbackFromPrev.error_mode}</Text>
+        {(feedbackFromPrev.feedback !== 1 && feedbackFromPrev.feedback !==6) && 
+          <YoutubeIframe
+            height={200}
+            width={300}
+            play={playing}
+            videoId={feedbackFromPrev.video_id}
+          />
+        }
+        <Text style={{...GlobalStyles.appLargeParagraphText, textAlign: 'center'}}>{feedbackFromPrev.instructions}</Text>
+      </View>
       )
     } else if (exerciseSetsComplete && submittedPainRating) {
       return (
@@ -278,14 +420,14 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
           autoPlay
           loop
         />
-        <Text style={GlobalStyles.appHeadingText}>Calibrating device</Text>
+        <Text style={{...GlobalStyles.appHeadingText, textAlign: 'center'}}>Calibrating device. Please sit perfectly still.</Text>
       </View>
       )
     } else if (needsCalibration) {
-      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Please get in position and press "Start Calibrating" to calibrate your device for the current exercise.</Text>
+      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Please get in position and press "Start Calibrating". While calibrating, please sit still.</Text>
     } 
      else {
-      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Press "Start Set" to get started!</Text>
+      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>{feedbackError}{startSetText}</Text>
     }
   }
 
@@ -336,7 +478,7 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
           </View>
           <View style={GlobalStyles.footerContainer}>
             {setInProgress && (
-              <View style={{gap: 5}}>
+              <View style={{gap: 10}}>
                 <Button 
                   style={GlobalStyles.button}  
                   mode="contained" 
@@ -364,12 +506,12 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
               <Button 
               style={GlobalStyles.button}  
               mode="contained"
-              disabled={countdownInProgress}
+              disabled={countdownInProgress || !connectedDevice}
               buttonColor={Colors.primary}
               onPress={calibrate}
               >
               <Text style={styles.startExerciseButtonText}>
-                Calibrate Device 
+                  {connectedDevice ? "Start Calibrating" : "Device disconnected"}
               </Text>
             </Button> 
             }
@@ -377,16 +519,16 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
               <Button 
               style={GlobalStyles.button}  
               mode="contained"
-              disabled={countdownInProgress || calibrating}
+              disabled={countdownInProgress || calibrating || !connectedDevice}
               buttonColor={Colors.primary}
               onPress={startSet}
               >
               <Text style={styles.startExerciseButtonText}>
-                Start Set 
+                  {connectedDevice ? "Start Set" : "Device disconnected"}
               </Text>
             </Button> 
             }
-            {(exerciseSetsComplete && !submittedPainRating) &&
+            {(exerciseSetsComplete && !submittedPainRating && !feedbackFromPrev) &&
               <Button 
                 style={GlobalStyles.button}  
                 mode="contained"
@@ -396,6 +538,19 @@ export const ExerciseInProgressScreen = ({navigation, route}: {navigation: any, 
               >
                 <Text style={styles.startExerciseButtonText}>
                   Submit Pain Rating
+                </Text>
+              </Button> 
+            }
+            {(exerciseSetsComplete && !submittedPainRating && feedbackFromPrev) &&
+              <Button 
+                style={GlobalStyles.button}  
+                mode="contained"
+                disabled={countdownInProgress || calibrating}
+                buttonColor={Colors.primary}
+                onPress={() => setFeedbackFromPrev(undefined)}
+              >
+                <Text style={styles.startExerciseButtonText}>
+                  Finish Exercises
                 </Text>
               </Button> 
             }

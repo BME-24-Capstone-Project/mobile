@@ -5,8 +5,10 @@ import { login } from "../../queries/login";
 import { useState } from "react";
 import { GlobalStyles } from "../../common/data-types/styles";
 import { BaseURL } from "../../common/common";
+import { BleManager } from "react-native-ble-plx";
 // import {decode as atob, encode as btoa} from "base-64"
 
+const manager = new BleManager
 
 export const LoginScreen = ({navigation}: {navigation: any}) => {
 
@@ -47,7 +49,7 @@ export const LoginScreen = ({navigation}: {navigation: any}) => {
 
   return (
     <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.secondary}}> 
-    <ScrollView scrollEnabled={false} keyboardShouldPersistTaps='handled' style={{width: '100%'}} contentContainerStyle={{alignContent: 'center', alignItems: 'center', flexGrow: 1, paddingTop: '50%'}}>
+    <ScrollView scrollEnabled={false} keyboardShouldPersistTaps='handled' style={{width: '100%'}} contentContainerStyle={{alignContent: 'center', alignItems: 'center', flexGrow: 1, paddingTop: '30%'}}>
       <Image style={styles.image} source={require('../../assets/arthrosync-logo.png')}/>
       <View style={styles.loginContainer}>
         
@@ -58,11 +60,11 @@ export const LoginScreen = ({navigation}: {navigation: any}) => {
               Login 
             </Text>
           </Button>
-          <Button style={{width: '75%', margin: 10}}  mode="contained" onPress={() => navigation.navigate('BluetoothTest')}> 
+          {/* <Button style={{width: '75%', margin: 10}}  mode="contained" onPress={() => navigation.navigate('BluetoothTest')}> 
             <Text style={GlobalStyles.buttonText}>
               Bluetooth test 
             </Text>
-          </Button>
+          </Button> */}
         
       </View>
       </ScrollView>

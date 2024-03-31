@@ -6,8 +6,7 @@ import { AirbnbRating, Rating } from 'react-native-ratings';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { Colors } from '../common/data-types/styles';
-
-const manager = new BleManager();
+import { Manager } from '../common/common';
 
 
 export const BluetoothTest = () => {
@@ -17,30 +16,41 @@ export const BluetoothTest = () => {
 
   function scanAndConnect() {
     console.log("Scan Started")
-    manager.startDeviceScan(null, null, (error, device) => {
+    Manager.startDeviceScan(null, null, (error, device) => {
       if (error) {
         // Handle error (scanning will be stopped automatically)
         console.log('Error while scanning devices');
         console.log(error);
         return;
       }
-      if (device && (device.id == "08A17802-5E6A-8BB9-FA8F-2B9B3F4D3765" || device.name === "ESP32_BLE" || device.localName === "ESP32_BLE" )) {
+      if (device?.name !== null) {
+        console.log(device?.name)
+      }
+      
+      if (device && (device.id == "08A17802-5E6A-8BB9-FA8F-2B9B3F4D3765" || device.name === "ArthroSync Device 1" || device.localName === "ArthroSync Device 1" )) {
         device.connect().then(device => {
           console.log("Connected to: " + device.name)
+          console.log(device.id)
+          Manager.isDeviceConnected(device.id).then((response) => {
+            console.log("Device connected?")
+            console.log(response)
+          }).catch((error) => {
+            console.log(error)
+          })
           setConnectedDevice(device)
           device.discoverAllServicesAndCharacteristics()
         }).catch(error => {
           console.log("Error connecting to device: ")
           console.log(error)
-          manager.stopDeviceScan()
+          Manager.stopDeviceScan()
         })
-        manager.stopDeviceScan()
+        Manager.stopDeviceScan()
       }
     });
   }
 
   function stopAndDisconnect() {
-    manager.stopDeviceScan()
+    Manager.stopDeviceScan()
     connectedDevice?.cancelConnection().then((device) => {
       console.log(device.name + " disconnected")
     }).catch(error => {
@@ -51,7 +61,7 @@ export const BluetoothTest = () => {
 
   function readDevicesServices() {
     if (connectedDevice) {
-      manager.servicesForDevice(connectedDevice?.id).then((services) => {
+      Manager.servicesForDevice(connectedDevice?.id).then((services) => {
         console.log(services[0].characteristics().then((characteristic) => {
           characteristic[0].monitor((_, updatedChar) => {
             if (updatedChar !== null && updatedChar.value !== null) {

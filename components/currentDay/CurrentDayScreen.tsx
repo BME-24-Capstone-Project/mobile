@@ -7,21 +7,20 @@ import { Button, Dialog, Modal, Portal, Switch, useTheme} from "react-native-pap
 import YoutubeIframe from "react-native-youtube-iframe";
 import { Colors, GlobalStyles } from "../../common/data-types/styles";
 import { styles } from "./CurrentDayScreenStyles";
-import { BaseURL } from "../../common/common";
+import { BaseURL, Manager } from "../../common/common";
+import { useBluetooth } from "../providers/bluetooth";
 
 export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: any}) => {
+
   const theme = useTheme()
   const [exercises, setExercises] = useState<AssignedExercise[]>()
   const [session, setSession] = useState<Session>()
   const [wantsFeedback, setWantsFeedback] = useState(true);
-  const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dayFinished, setDayFinished] = useState(false);
   const [playing, setPlaying] = useState(false);
-
   const [selectedExercise, setSelectedExercise] = useState<AssignedExercise>()
-  const showHelpModal = () => setHelpModalVisible(true);
-  const hideHelpModal = () => setHelpModalVisible(false);
+  
   const showDialog = () => setDialogVisible(true);
   const hideDialog = () => setDialogVisible(false);
   let exerciseList = undefined;
@@ -106,8 +105,8 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
       <View style={styles.exerciseListItem} key={exercise.exercise.name}>
         <View style={styles.exerciseListItemDetailsContainer}>
           <Text style={GlobalStyles.appHeadingText}>{exercise.exercise.name}</Text>
-          {(exercise.num_sets && exercise.num_sets > 1) && <Text style={GlobalStyles.appParagraphText}>Sets: {exercise.num_sets}</Text>}
-          {(exercise.num_reps && exercise.num_reps > 1) && <Text style={GlobalStyles.appParagraphText}>Repetitions: {exercise.num_reps}</Text>}
+          {(exercise.num_sets && exercise.num_sets > 0) && <Text style={GlobalStyles.appParagraphText}>Sets: {exercise.num_sets}</Text>}
+          {(exercise.num_reps && exercise.num_reps > 0) && <Text style={GlobalStyles.appParagraphText}>Repetitions: {exercise.num_reps}</Text>}
           {exercise.distance && <Text style={GlobalStyles.appParagraphText}>Distance: {exercise.distance}m</Text>}
           <View style={styles.youtubePlayerContainer}>
             {exercise.exercise.video_id && (
@@ -125,66 +124,21 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
             )}
           </View>
         </View>
-        {/* <TouchableOpacity style={styles.exerciseListItemHelpContainer} onPress={() => {
-          setSelectedExercise(exercise)
-          showHelpModal()
-        }}>
-          <FontAwesomeIcon size={40} icon={ faCircleInfo } />
-          <Text style={GlobalStyles.appParagraphText}>More Info</Text>
-        </TouchableOpacity> */}
       </View>
     )
-  }
-
-
-  const HelpModal = ({assignedExercise}: {assignedExercise: AssignedExercise}) => {
-
-    return ( 
-      <Portal>
-        <Modal visible={helpModalVisible} onDismiss={hideHelpModal} contentContainerStyle={styles.modalContainerStyle}>
-          <TouchableOpacity onPress={hideHelpModal}>
-            <FontAwesomeIcon size={30} icon={ faXmark }/>
-          </TouchableOpacity>
-          <View style={styles.youtubePlayerContainer}>
-            {assignedExercise.exercise.video_id && (
-              <YoutubeIframe
-                height={200}
-                play={playing}
-                videoId={assignedExercise.exercise.video_id}
-              />
-            )}
-            {assignedExercise.note && (
-            <View style={{gap: 5}}>
-              <Text style={GlobalStyles.appSubHeadingText}>Physiotherapist's Notes:</Text>
-              <Text style={GlobalStyles.appParagraphText}>{assignedExercise.note}</Text>
-            </View>
-            )}
-          </View>
-          <Button
-            mode="contained" 
-            buttonColor='red'
-            onPress={hideHelpModal}
-          >
-            <Text style={GlobalStyles.buttonText}>
-              Close Modal
-            </Text>
-          </Button>
-        </Modal>
-      </Portal>
-    ) 
   }
 
   return (
     <SafeAreaView>
       <View style={styles.container}>
           <View style={styles.headerContainer}>
-            {/* {dayFinished && */}
+            {dayFinished &&
               <View style={styles.sessionOptionsList}>
                 <View style={{...styles.sessionOptionsItem, backgroundColor: 'green', height: 50}}>
-                  <Text style={{...GlobalStyles.appSubSubHeadingText, color: Colors.tertiary, textAlign: 'center' }}>Session completed! you're done for the day.</Text>
+                  <Text style={{...GlobalStyles.appSubSubHeadingText, color: Colors.tertiary, textAlign: 'center' }}>Session completed! You're done for the day.</Text>
                 </View>
               </View>
-            {/* } */}
+            }
           </View>
           <View style={styles.contentContainer}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{padding: 10}} style={styles.scrollView}>
@@ -231,9 +185,6 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
           )}
         </View>
       </View>
-      {selectedExercise && (
-        <HelpModal assignedExercise={selectedExercise}/>
-      )}
       <Portal>
         <Dialog visible={dialogVisible} style={{backgroundColor: Colors.secondary}} onDismiss={hideDialog}>
           <Dialog.Title>Are you sure?</Dialog.Title>
