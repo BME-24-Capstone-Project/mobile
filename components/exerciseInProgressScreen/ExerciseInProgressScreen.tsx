@@ -14,8 +14,32 @@ import { Characteristic, Device, Subscription } from "react-native-ble-plx";
 import * as child_process from "child_process";
 import YoutubeIframe from "react-native-youtube-iframe";
 
-export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {navigation: any, route: any, connectedDevice: Device | null}) => {
+function convertStringToByteArray(str) {                                                                                                                                      
+  var bytes = []; 
+  const decodedFloats = [];                                                                                                                                                            
+  for (var i = 0; i < str.length; ++i) {                                                                                                                                      
+    bytes.push(str.charCodeAt(i));                                                                                                                                            
+  }         
+  
+  for (let i = 0; i < bytes.length; i += 2) {
+    // Combine two bytes to form a 16-bit integer. Adjust for little endian as necessary.
+    let int16 = (bytes[i + 1] << 8) | bytes[i];
 
+    // JavaScript bitwise operations treat their operands as a sequence of 32 bits,
+    // so we need to manually handle the sign bit for int16 values.
+    if (int16 & 0x8000) {
+      int16 = int16 - 0x10000;
+    }
+
+    // Convert the scaled integer back to the float value.
+    const floatValue = int16 / 10.0;
+    decodedFloats.push(floatValue);
+  }
+
+  return decodedFloats                                                                                                                                                                
+}
+
+export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {navigation: any, route: any, connectedDevice: Device | null}) => {
 
   const session_id = route.params.session_id
   const [currentSetAndSessionData, setCurrentSetAndSessionData] = useState<CurrentSetAndSessionData>()
@@ -44,6 +68,7 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
     'yaw': [[], []],
     'angle': []
   })
+  const [count, setCount] = useState(0)
 
   const setupDeviceDisconnectMonitor = () => {
     return connectedDevice?.onDisconnected((error, device) => {
@@ -55,9 +80,9 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
     })
   }
 
-  useEffect(() => {
-    console.log(exerciseData)
-  }, [exerciseData] )
+  // useEffect(() => {
+  //   console.log(exerciseData)
+  // }, [exerciseData] )
 
   const setupBleMonitors = () => {
     let characteristicMonitors: Subscription[] = []
@@ -80,18 +105,17 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
                 } else {
                   if(characteristic?.value) {
                     console.log("Batch Received")
-                    const payload = JSON.parse(base64.decode(characteristic.value))
-                    console.log(exerciseData)
-                    
+                    const payload = base64.decode(characteristic.value)
+                    let payloadBytes = convertStringToByteArray(payload)
+                    setCount(prev => prev +1)
                     setExerciseData(prev => {return {
-                        acc_x: [[...prev.acc_x[0], ...payload['acc_x_1']], [...prev.acc_x[1], ...payload['acc_x_2']]] as never,
-                        acc_y: [[...prev.acc_y[0], ...payload['acc_y_1']], [...prev.acc_y[1], ...payload['acc_y_2']]] as never,
-                        acc_z: [[...prev.acc_z[0], ...payload['acc_z_1']], [...prev.acc_z[1], ...payload['acc_z_2']]] as never,
-                        roll: [[...prev.roll[0], ...payload['roll_1']], [...prev.roll[1], ...payload['roll_2']]] as never,
-                        yaw: [[...prev.yaw[0], ...payload['yaw_1']], [...prev.yaw[1], ...payload['yaw_2']]] as never,
-                        pitch: [[...prev.pitch[0], ...payload['pitch_1']], [...prev.pitch[1], ...payload['pitch_2']]] as never,
-                        angle: [...prev.angle, ...payload['angle']] as never,
-                        
+                        acc_x: [[...prev.acc_x[0], payloadBytes[0]], [...prev.acc_x[1], payloadBytes[1]]] as never,
+                        acc_y: [[...prev.acc_y[0], payloadBytes[2]], [...prev.acc_y[1], payloadBytes[3]]] as never,
+                        acc_z: [[...prev.acc_z[0], payloadBytes[4]], [...prev.acc_z[1], payloadBytes[5]]] as never,
+                        roll: [[...prev.roll[0], payloadBytes[6]], [...prev.roll[1], payloadBytes[7]]] as never,
+                        yaw: [[...prev.yaw[0], payloadBytes[8]], [...prev.yaw[1], payloadBytes[9]]] as never,
+                        pitch: [[...prev.pitch[0], payloadBytes[10]], [...prev.pitch[1], payloadBytes[11]]] as never,
+                        angle: [...prev.angle, payloadBytes[12]] as never,
                     }}
                     )
                   }
@@ -161,72 +185,79 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
 
   useEffect(() => {
     if (loadingFeedback) {
+      console.log("First Check Debug")
       connectedDevice?.services().then((services) => {
+        console.log("Second Check Debug")
         services[0].writeCharacteristicWithResponse(CONTROL_CHARACTERISTIC_UUID, base64.encode('30')).then((characteristic) => {
-          console.log('Final Data')
-          console.log(exerciseData)
-          let tempExerciseData = exerciseData
-          const keys = ["acc_x", "acc_y", "acc_z", "roll", "pitch", "yaw", "angle"]
-          let maxSize = 0
-          keys.forEach((key) => {
-            tempExerciseData[key as never].forEach((arr) => {
-              if(arr.length > maxSize) {
-                maxSize = arr.length
-              }
-            })
-          })
-          console.log(maxSize)
-          keys.forEach((key) => {
-            tempExerciseData[key as never].forEach((arr) => {
-              if(arr.length < maxSize) {
-                for(let i = 0; i < maxSize - arr.length; i++) {
-                  arr.push(0)
-                }
-              }
-            })
-          })
-          axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, tempExerciseData).then((response: any) => {
-            const integerObtainedFromResponse = response.data.data.feedback
-            if (wantsFeedback) {
-                let feedback = FeedbackMappings.find(obj => obj.feedback == integerObtainedFromResponse);
-                // if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "Sit to Stand" && feedback.feedback > 6) {
-                //   feedback = FeedbackMappings.find(obj => obj.feedback == 1);
-                // }
-                // if (feedback && currentSetAndSessionData?.assigned_exercise.exercise.name === "One Legged Stair Climb" && feedback.feedback < 6) {
-                //   feedback = FeedbackMappings.find(obj => obj.feedback == 6);
-                // }
-                setFeedbackFromPrev(feedback)
-            }
-            setLoadingFeedback(false)
-            loadCurrentExerciseAndSessionData()
-            console.log("Reset")
-            setExerciseData({
-              'acc_x': [[], []],
-              'acc_y': [[], []],
-              'acc_z': [[], []],
-              'roll': [[], []],
-              'pitch': [[], []],
-              'yaw': [[], []],
-              'angle': []
-            })
-        }).catch((error: any) => {
-            setLoadingFeedback(false)
-            loadCurrentExerciseAndSessionData()
-            setFeedbackError("Error generating feedback. ")
-            console.log('Error creating exercise set: ')
-            console.log(error)
-            console.log("Reset")
-            // setExerciseData({
-            //   'acc_x': [[], []],
-            //   'acc_y': [[], []],
-            //   'acc_z': [[], []],
-            //   'roll': [[], []],
-            //   'pitch': [[], []],
-            //   'yaw': [[], []],
-            //   'angle': []
+          console.log("Third Check Debug")
+          console.log("timeout initiated")
+          setTimeout(() => {
+            console.log(count)
+            setCount(0)
+            let tempExerciseData = exerciseData
+            // const keys = ["acc_x", "acc_y", "acc_z", "roll", "pitch", "yaw", "angle"]
+            // let maxSize = 0
+            // keys.forEach((key) => {
+            //   tempExerciseData[key as never].forEach((arr) => {
+            //     if(arr.length > maxSize) {
+            //       maxSize = arr.length
+            //     }
+            //   })
             // })
+            // console.log("Max Size: ")
+            // console.log(maxSize)
+            // keys.forEach((key) => {
+            //   tempExerciseData[key as never].forEach((arr) => {
+            //     if(arr.length < maxSize) {
+            //       for(let i = 0; i < maxSize - arr.length; i++) {
+            //         arr.push(0)
+            //       }
+            //     }
+            //   })
+            // })
+            axios.post(`${BaseURL}/exercise_sets/${session_id}/${currentSetAndSessionData?.assigned_exercise.id}`, tempExerciseData).then((response: any) => {
+              const integerObtainedFromResponse = response.data.data.feedback
+              if (wantsFeedback) {
+                  let feedback = FeedbackMappings.find(obj => obj.feedback == integerObtainedFromResponse);
+                  setFeedbackFromPrev(feedback)
+              }
+              setLoadingFeedback(false)
+              loadCurrentExerciseAndSessionData()
+              console.log("Reset")
+              setExerciseData({
+                'acc_x': [[], []],
+                'acc_y': [[], []],
+                'acc_z': [[], []],
+                'roll': [[], []],
+                'pitch': [[], []],
+                'yaw': [[], []],
+                'angle': []
+              })
+            }).catch((error: any) => {
+                setLoadingFeedback(false)
+                loadCurrentExerciseAndSessionData()
+                setFeedbackError("Error generating feedback. ")
+                console.log('Error creating exercise set: ')
+                console.log(error)
+                console.log("Reset")
+                // setExerciseData({
+                //   'acc_x': [[], []],
+                //   'acc_y': [[], []],
+                //   'acc_z': [[], []],
+                //   'roll': [[], []],
+                //   'pitch': [[], []],
+                //   'yaw': [[], []],
+                //   'angle': []
+                // })
+            })
+          }, 500)
+        }).catch((error) => {
+          console.log("Error writing 30 to control")
+          console.log(error)
         })
-        })
+      }).catch((error) => {
+        console.log("Error with services on submit")
+        console.log(error)
       })
     }
   }, [loadingFeedback, connectedDevice]);
