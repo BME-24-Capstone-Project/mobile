@@ -13,8 +13,8 @@ const manager = new BleManager
 export const LoginScreen = ({navigation}: {navigation: any}) => {
 
   const theme = useTheme();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("jonah@capstone.com");
+  const [password, setPassword] = useState("password");
 
   const login = () => {
     axios.post(`${BaseURL}/auth/login`,{}, {  

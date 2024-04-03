@@ -79,25 +79,30 @@ export const CurrentDayScreen = ({navigation, route}: {navigation: any, route: a
 
   const loadSession = () => {
     axios.get(`${BaseURL}/sessions`).then((response: any) => {
+      console.log(response.data)
       if (!response.data.error) {
         console.log('Session Found')
         setSession(response.data.data)
+      } else {
+        setSession(undefined)
       }
+    
     }).catch((error: any) => {
       console.log('Error finding Session: ')
       console.log(error)
     })
 
-    axios.get(`${BaseURL}/sessions/recent`).then((response: any) => {
-      if (!response.data.error) {
-        console.log('Recently complete session Found')
-        setSession(undefined)
-        setDayFinished(true)
-      }
-    }).catch((error: any) => {
-      console.log('Error finding recently completed session: ')
-      console.log(error)
-    })
+    //uncomment this to prevent users form doing multiple sessions in a day.
+    // axios.get(`${BaseURL}/sessions/recent`).then((response: any) => {
+    //   if (!response.data.error) {
+    //     console.log('Recently complete session Found')
+    //     setSession(undefined)
+    //     setDayFinished(true)
+    //   }
+    // }).catch((error: any) => {
+    //   console.log('Error finding recently completed session: ')
+    //   console.log(error)
+    // })
   }
   
   if (exercises) {
