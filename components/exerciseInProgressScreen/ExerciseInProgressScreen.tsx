@@ -104,7 +104,6 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
                   console.log(error)
                 } else {
                   if(characteristic?.value) {
-                    console.log("Batch Received")
                     const payload = base64.decode(characteristic.value)
                     let payloadBytes = convertStringToByteArray(payload)
                     setCount(prev => prev +1)
@@ -399,7 +398,7 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
           <AirbnbRating
             count={5}
             selectedColor={Colors.primary}
-            reviews={["No pain", "Mild", "Moderate", "Severe", "Extreme"]}
+            reviews={["Extreme", "Severe", "Moderate", "Mild",  "No pain"]}
             defaultRating={3}
             size={40}
             onFinishRating={(rating) => setPainRating(rating)}
@@ -455,7 +454,7 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
       </View>
       )
     } else if (needsCalibration) {
-      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Please get in position and press "Start Calibrating". While calibrating, please sit still.</Text>
+      return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>Find a comfortable position, then press 'Start Calibrating' and remain still while the device calibrates.</Text>
     } 
      else {
       return <Text style={{...GlobalStyles.appHeadingText, textAlign: "center"}}>{feedbackError}{startSetText}</Text>
@@ -480,8 +479,8 @@ export const ExerciseInProgressScreen = ({navigation, route, connectedDevice}: {
                 <>
                   <Text style={GlobalStyles.appHeadingText}>{currentSetAndSessionData?.assigned_exercise.exercise.name}</Text>
                   <View style={{flexDirection: 'row'}}>
-                    <Text style={GlobalStyles.appSubHeadingText}>Set: </Text>
-                    <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData?.completed_exercise_sets + 1}/{currentSetAndSessionData.assigned_exercise.num_sets}</Text>
+                    <Text style={GlobalStyles.appSubHeadingText}>Set {currentSetAndSessionData?.completed_exercise_sets + 1} of {currentSetAndSessionData.assigned_exercise.num_sets}</Text>
+                    {/* <Text style={GlobalStyles.appLargeParagraphText}>{currentSetAndSessionData?.completed_exercise_sets + 1}/{currentSetAndSessionData.assigned_exercise.num_sets}</Text> */}
                   </View>
                   <View style={{flexDirection: 'row'}}>
                     <Text style={GlobalStyles.appSubHeadingText}>Reps: </Text>

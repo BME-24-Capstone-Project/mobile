@@ -102,51 +102,35 @@ function App(): JSX.Element {
                   ...GlobalStyles.appHeadingText,
                   color: theme.colors.secondary
                 },
-                // headerLeft: () => (
-                //   <TouchableOpacity onPress>
-                //     <FontAwesomeIcon size={30} icon={ faArrowLeft } />
-                //   </TouchableOpacity>
-                // )
+                headerTintColor: 'white',
+                headerBackTitleStyle: {
+                  ...GlobalStyles.appHeadingText
+                },
                 headerBackTitle: "Back",
-                headerRight: () => (BluetoothConnectionIndicator({connectedDevice: connectedDevice}))
+                headerRight: () => (BluetoothConnectionIndicator({connectedDevice: connectedDevice})),
+                headerLargeTitle: true,
               }}
             />
             <Stack.Screen
               name="ExerciseInProgressScreen"
                 children={(props) => <ExerciseInProgressScreen {...props} connectedDevice={connectedDevice}/>}
-              options={{
-                headerTitle: "Current Set",
-                headerBackTitle: "Back",
-                headerStyle: {
-                  backgroundColor: theme.colors.primary
-                },
-                headerTitleStyle: {
-                  ...GlobalStyles.appHeadingText,
-                  color: theme.colors.secondary
-                },
-                headerRight: () => (BluetoothConnectionIndicator({connectedDevice: connectedDevice}))
-              }}
-              // options={{ title: "today" }}
-            />
-            <Stack.Screen
-              name="BluetoothTest"
-              component={BluetoothTest}
-              options={{ 
-                headerTitle: "Your Treatment Plan",
-                headerStyle: {
-                  backgroundColor: theme.colors.primary
-                },
-                headerTitleStyle: {
-                  ...GlobalStyles.appHeadingText,
-                  color: theme.colors.secondary
-                },
-                // headerLeft: () => (
-                //   <TouchableOpacity onPress>
-                //     <FontAwesomeIcon size={30} icon={ faArrowLeft } />
-                //   </TouchableOpacity>
-                // )
-                headerBackTitle: "Back"
-              }}
+                options={{
+                  headerTitle: "Current Set",
+                  headerStyle: {
+                    backgroundColor: theme.colors.primary
+                  },
+                  headerTitleStyle: {
+                    ...GlobalStyles.appHeadingText,
+                    color: theme.colors.secondary
+                  },
+                  headerTintColor: 'white',
+                  headerBackTitleStyle: {
+                    ...GlobalStyles.appHeadingText
+                  },
+                  headerBackTitle: "Back",
+                  headerRight: () => (BluetoothConnectionIndicator({connectedDevice: connectedDevice})),
+                  headerLargeTitle: true,
+                }}
             />
           </Stack.Navigator>
         </NavigationContainer>

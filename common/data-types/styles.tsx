@@ -31,7 +31,7 @@ export const GlobalStyles = StyleSheet.create({
     },
     footerContainer: {
         width: '100%',
-        gap: 5,
+        gap: 20,
         paddingTop: 10,
     },
     container: {
@@ -39,7 +39,7 @@ export const GlobalStyles = StyleSheet.create({
         // backgroundColor: Colors.secondary,
     },
     button: {
-        padding: 5,
+        padding: 12,
     }
 
 })
